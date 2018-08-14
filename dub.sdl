@@ -1,0 +1,16 @@
+name "uninode"
+description "Universal node with application"
+authors "Maksim Galanin"
+copyright "Copyright (c) 2015-2018, Milofon Project. All rights reserved."
+license "BSD 3-clause"
+
+targetType "library"
+targetPath "out"
+targetName "uninode"
+
+dependency ":core" version="*"
+dependency ":serialization" version="*"
+
+subPackage "core"
+subPackage "serialization"
+
