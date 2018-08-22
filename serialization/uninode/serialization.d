@@ -7,6 +7,11 @@
 
 module uninode.serialization;
 
+public
+{
+    import vibe.data.serialization : optional;
+}
+
 private
 {
     import vibe.data.serialization :

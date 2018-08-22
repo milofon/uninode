@@ -185,10 +185,10 @@ struct UniNode
     }
 
 
-    this(T)(T val) if (isBoolean!T)
+    this(T)(T val) inout if (isBoolean!T)
     {
         _kind = Kind.boolean;
-        _bool = val;
+        (cast(bool)_bool) = val;
     }
 
 
@@ -203,10 +203,10 @@ struct UniNode
     }
 
 
-    this(T)(T val) if (isUnsignedNumeric!T)
+    this(T)(T val) inout if (isUnsignedNumeric!T)
     {
         _kind = Kind.uinteger;
-        _uint = val;
+        (cast(ulong)_uint) = val;
     }
 
 
@@ -223,10 +223,10 @@ struct UniNode
     }
 
 
-    this(T)(T val) if (isSignedNumeric!T)
+    this(T)(T val) inout if (isSignedNumeric!T)
     {
         _kind = Kind.integer;
-        _int = val;
+        (cast(long)_int) = val;
     }
 
 
@@ -243,10 +243,10 @@ struct UniNode
     }
 
 
-    this(T)(T val) if (isFloatingPoint!T)
+    this(T)(T val) inout if (isFloatingPoint!T)
     {
         _kind = Kind.floating;
-        _float = val;
+        (cast(real)_float) = val;
     }
 
 
@@ -263,10 +263,10 @@ struct UniNode
     }
 
 
-    this(T)(T val) if(isSomeString!T)
+    this(T)(T val) inout if(isSomeString!T)
     {
         _kind = Kind.text;
-        _string = val;
+        (cast(string)_string) = val;
     }
 
 
@@ -354,8 +354,7 @@ struct UniNode
     }
 
 
-    inout(T) get(T)() inout @trusted
-        if (isUniNodeType!T || isUniNodeArray!T || isUniNodeObject!T)
+    inout(T) get(T)() inout @trusted if (isUniNodeType!T)
     {
         try {
             static if (isSignedNumeric!T)
@@ -695,6 +694,95 @@ private:
 }
 
 
+
+unittest
+{
+    import std.concurrency;
+
+    static void child(Tid parent, UniNode tail)
+    {
+        bool runned = true;
+        while(runned)
+            receive(
+                (UniNode nodes) {
+                    nodes.appendArrayElement(tail);
+                    parent.send(nodes);
+                },
+                (OwnerTerminated e) {
+                    runned = false;
+                }
+            );
+    }
+
+    auto tail = immutable(UniNode)(1);
+    auto p = spawn(&child, thisTid(), tail);
+    auto nodes = UniNode.emptyArray();
+
+    foreach (i; 0..4)
+    {
+        p.send(nodes);
+        nodes = receiveOnly!UniNode;
+    }
+
+    assert(nodes.length == 4);
+}
+
+
+
+unittest
+{
+    import std.meta : AliasSeq;
+
+    alias IUniNode = immutable(UniNode);
+    alias CUniNode = const(UniNode);
+
+    void testImNode(TT)(immutable(UniNode) imnode, TT initVal)
+    {
+        assert(imnode.kind != UniNode.Kind.nil);
+        auto ret = imnode.get!TT;
+        assert(is(typeof(ret) == immutable(TT)));
+        assert(ret == initVal);
+    }
+
+    void testConstNode(TT)(const(UniNode) cnode, TT initVal)
+    {
+        assert(cnode.kind != UniNode.Kind.nil);
+        auto ret = cnode.get!TT;
+        assert(is(typeof(ret) == const(TT)));
+        assert(ret == initVal);
+    }
+
+    auto ibool = IUniNode(true);
+    testImNode!bool(ibool, true);
+
+    foreach (TT; AliasSeq!(byte, short, int, long))
+    {
+        immutable(TT) ival = 12;
+
+        auto inode = IUniNode(ival);
+        testImNode!TT(inode, ival);
+
+        auto cnode = CUniNode(ival);
+        testConstNode!TT(cnode, ival);
+    }
+
+
+    foreach (TT; AliasSeq!(ubyte, ushort, uint, ulong))
+    {
+        immutable(TT) ival = 13U;
+        auto inode = IUniNode(ival);
+        testImNode!TT(inode, ival);
+
+        auto cnode = CUniNode(ival);
+        testConstNode!TT(cnode, ival);
+    }
+
+
+    auto snode = IUniNode("one");
+    testImNode!string(snode, "one");
+}
+
+
 /**
  * UniNode error class
  */
@@ -708,12 +796,19 @@ class UniNodeException : Exception
 }
 
 
-
 template isUniNodeType(T)
 {
-    enum isUniNodeType = isNumeric!T || isBoolean!T || isSomeString!T
+    enum isUniNodeType = isUniNodeInnerType!T
+        || isUniNodeArray!T || isUniNodeObject!T;
+}
+
+
+template isUniNodeInnerType(T)
+{
+    enum isUniNodeInnerType = isNumeric!T || isBoolean!T || isSomeString!T
         || is(T == typeof(null)) || isRawData!T;
 }
+
 
 
 template isUniNodeArray(T)
