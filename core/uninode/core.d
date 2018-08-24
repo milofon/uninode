@@ -359,11 +359,19 @@ struct UniNode
         try {
             static if (isSignedNumeric!T)
             {
+                if (_kind == Kind.uinteger)
+                    return cast(T)(_uint);
                 checkType!T(Kind.integer);
                 return cast(T)(_int);
             }
             else static if (isUnsignedNumeric!T)
             {
+                if (_kind == Kind.integer)
+                {
+                    auto val = _int;
+                    if (val >= 0)
+                        return cast(T)(val);
+                }
                 checkType!T(Kind.uinteger);
                 return cast(T)(_uint);
             }

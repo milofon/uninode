@@ -9,7 +9,7 @@ module uninode.serialization;
 
 public
 {
-    import vibe.data.serialization : optional;
+    import vibe.data.serialization : optional, byName;
 }
 
 private
