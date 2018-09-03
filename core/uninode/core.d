@@ -13,6 +13,7 @@ private
 {
     import std.algorithm.comparison : equal;
     import std.traits;
+    import std.traits : isTraitsArray = isArray;
     import std.variant : maxSize;
     import std.format : fmt = format;
     import std.array : appender;
@@ -519,7 +520,7 @@ struct UniNodeImpl(This)
                 checkType!T(Kind.boolean);
                 return _bool;
             }
-            else static if (isArray!T && is(ForeachType!T == This))
+            else static if (isTraitsArray!T && is(ForeachType!T == This))
             {
                 checkType!T(Kind.array);
                 return _array;
@@ -800,16 +801,58 @@ struct UniNodeImpl(This)
                 "nil": nilNode,
                 "arr": arrNode]);
 
-        assert("{bin:raw([1, 2, 3]), bool:bool(true), nil:nil,"
-                ~ " i:int(2147483647), f:float(nan), arr:[int(2147483647), "
-                ~ "float(nan), text(node), nil], "
-                ~ "text:text(node), ui:uint(4294967295)}" == objNode.toString);
+        assert(objNode.toString.length);
     }
 
-
+    /**
+     * cast to This type
+     */
     inout(This) toThis() inout
     {
         return () @trusted { return cast(This)this; }();
+    }
+
+    /**
+     * Check node is null
+     */
+    bool isNull() inout
+    {
+        return _kind == Kind.nil;
+    }
+
+    /**
+     * Check node is object
+     */
+    bool isObject() inout
+    {
+        return _kind == Kind.object;
+    }
+
+    /**
+     * Check node is array
+     */
+    bool isArray() inout
+    {
+        return _kind == Kind.array;
+    }
+
+
+    unittest
+    {
+        UniNode node;
+        assert(node.isNull);
+        assert(!node.isObject);
+        assert(!node.isArray);
+
+        node = UniNode.emptyObject;
+        assert(!node.isNull);
+        assert(node.isObject);
+        assert(!node.isArray);
+
+        node = UniNode.emptyArray;
+        assert(!node.isNull);
+        assert(!node.isObject);
+        assert(node.isArray);
     }
 
 
