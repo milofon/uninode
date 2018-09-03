@@ -807,6 +807,12 @@ struct UniNodeImpl(This)
     }
 
 
+    inout(This) toThis() inout
+    {
+        return () @trusted { return cast(This)this; }();
+    }
+
+
 private:
 
 
