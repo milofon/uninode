@@ -237,8 +237,8 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This.emptyObject;
-        assert(node.kind == Kind.object);
+        auto node = UniNode.emptyObject;
+        assert(node.isObject);
     }
 
 
@@ -251,9 +251,9 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This(1);
-        auto mnode = This(["one": node, "two": node]);
-        assert (mnode.kind == Kind.object);
+        auto node = UniNode(1);
+        auto mnode = UniNode(["one": node, "two": node]);
+        assert (mnode.isObject);
         assert("one" in mnode);
     }
 
@@ -273,8 +273,8 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This.emptyArray;
-        assert(node.kind == Kind.array);
+        auto node = UniNode.emptyArray;
+        assert(node.isArray);
     }
 
 
@@ -286,10 +286,10 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This(null);
-        assert (node.kind == Kind.nil);
-        auto node2 = This();
-        assert (node2.kind == Kind.nil);
+        auto node = UniNode(null);
+        assert (node.isNull);
+        auto node2 = UniNode();
+        assert (node2.isNull);
     }
 
 
@@ -302,12 +302,12 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This(false);
-        assert (node.kind == Kind.boolean);
+        auto node = UniNode(false);
+        assert (node.kind == UniNode.Kind.boolean);
         assert (node.get!bool == false);
 
-        auto nodei = This(0);
-        assert (nodei.kind == Kind.integer);
+        auto nodei = UniNode(0);
+        assert (nodei.kind == UniNode.Kind.integer);
     }
 
 
@@ -324,8 +324,8 @@ struct UniNodeImpl(This)
         foreach (TT; AliasSeq!(ubyte, ushort, uint, ulong))
         {
             TT v = cast(TT)11U;
-            auto node = This(v);
-            assert (node.kind == Kind.uinteger);
+            auto node = UniNode(v);
+            assert (node.kind == UniNode.Kind.uinteger);
             assert (node.get!TT == cast(TT)11U);
         }
     }
@@ -344,8 +344,8 @@ struct UniNodeImpl(This)
         foreach (TT; AliasSeq!(byte, short, int, long))
         {
             TT v = -11;
-            auto node = This(v);
-            assert (node.kind == Kind.integer);
+            auto node = UniNode(v);
+            assert (node.kind == UniNode.Kind.integer);
             assert (node.get!TT == cast(TT)-11);
         }
     }
@@ -364,8 +364,8 @@ struct UniNodeImpl(This)
         foreach (TT; AliasSeq!(float, double))
         {
             TT v = 11.11;
-            auto node = This(v);
-            assert (node.kind == Kind.floating);
+            auto node = UniNode(v);
+            assert (node.kind == UniNode.Kind.floating);
             assert (node.get!TT == cast(TT)11.11);
         }
     }
@@ -381,8 +381,8 @@ struct UniNodeImpl(This)
     unittest
     {
         string str = "hello";
-        auto node = This(str);
-        assert(node.kind == Kind.text);
+        auto node = UniNode(str);
+        assert(node.kind == UniNode.Kind.text);
         assert (node.get!(string) == "hello");
     }
 
@@ -400,27 +400,27 @@ struct UniNodeImpl(This)
     unittest
     {
         ubyte[] dynArr = [1, 2, 3];
-        auto node = This(dynArr);
-        assert (node.kind == Kind.raw);
+        auto node = UniNode(dynArr);
+        assert (node.kind == UniNode.Kind.raw);
         assert (node.get!(ubyte[]) == [1, 2, 3]);
 
         ubyte[3] stArr = [1, 2, 3];
-        node = This(stArr);
-        assert (node.kind == Kind.raw);
+        node = UniNode(stArr);
+        assert (node.kind == UniNode.Kind.raw);
         assert (node.get!(ubyte[3]) == [1, 2, 3]);
     }
 
 
     unittest
     {
-        auto node = This();
-        assert (node.kind == Kind.nil);
+        auto node = UniNode();
+        assert (node.isNull);
 
-        auto anode = This([node, node]);
-        assert (anode.kind == Kind.array);
+        auto anode = UniNode([node, node]);
+        assert (anode.isArray);
 
-        auto mnode = This(["one": node, "two": node]);
-        assert (mnode.kind == Kind.object);
+        auto mnode = UniNode(["one": node, "two": node]);
+        assert (mnode.isObject);
     }
 
 
@@ -457,8 +457,8 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This(1);
-        auto anode = This([node, node]);
+        auto node = UniNode(1);
+        auto anode = UniNode([node, node]);
         assert(anode.length == 2);
         anode.appendArrayElement(node);
         assert(anode.length == 3);
@@ -553,13 +553,13 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This(1);
-        auto mnode = This(["one": node, "two": node]);
-        assert (mnode.kind == Kind.object);
+        auto node = UniNode(1);
+        auto mnode = UniNode(["one": node, "two": node]);
+        assert (mnode.isObject);
 
         string[] keys;
-        This[] nodes;
-        foreach (string key, ref This node; mnode)
+        UniNode[] nodes;
+        foreach (string key, ref UniNode node; mnode)
         {
             keys ~= key;
             nodes ~= node;
@@ -584,12 +584,12 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto node = This(1);
-        auto mnode = This([node, node]);
-        assert (mnode.kind == Kind.array);
+        auto node = UniNode(1);
+        auto mnode = UniNode([node, node]);
+        assert (mnode.isArray);
 
-        This[] nodes;
-        foreach (ref This node; mnode)
+        UniNode[] nodes;
+        foreach (ref UniNode node; mnode)
             nodes ~= node;
 
         assert(nodes.length == 2);
@@ -633,18 +633,18 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto n1 = This(1);
-        auto n2 = This("1");
-        auto n3 = This(1);
+        auto n1 = UniNode(1);
+        auto n2 = UniNode("1");
+        auto n3 = UniNode(1);
 
         assert(n1 == n3);
         assert(n1 != n2);
-        assert(n1 != This(3));
+        assert(n1 != UniNode(3));
 
-        assert(This([n1, n2, n3]) != This([n2, n1, n3]));
-        assert(This([n1, n2, n3]) == This([n1, n2, n3]));
+        assert(UniNode([n1, n2, n3]) != UniNode([n2, n1, n3]));
+        assert(UniNode([n1, n2, n3]) == UniNode([n1, n2, n3]));
 
-        assert(This(["one": n1, "two": n2]) == This(["one": n1, "two": n2]));
+        assert(UniNode(["one": n1, "two": n2]) == UniNode(["one": n1, "two": n2]));
     }
 
 
@@ -657,10 +657,10 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto arr = This.emptyArray;
+        auto arr = UniNode.emptyArray;
         foreach(i; 1..10)
-            arr.appendArrayElement(This(i));
-        assert(arr[1] == This(2));
+            arr.appendArrayElement(UniNode(i));
+        assert(arr[1] == UniNode(2));
     }
 
 
@@ -673,12 +673,12 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        This[string] obj;
+        UniNode[string] obj;
         foreach(i; 1..10)
-            obj[i.to!string] = This(i*i);
+            obj[i.to!string] = UniNode(i*i);
 
-        This node = This(obj);
-        assert(node["2"] == This(4));
+        UniNode node = UniNode(obj);
+        assert(node["2"] == UniNode(4));
     }
 
 
@@ -697,12 +697,12 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        This node = This.emptyObject;
-        This[string] obj;
+        UniNode node = UniNode.emptyObject;
+        UniNode[string] obj;
         foreach(i; 1..10)
-            node[i.to!string] = This(i*i);
+            node[i.to!string] = UniNode(i*i);
 
-        assert(node["2"] == This(4));
+        assert(node["2"] == UniNode(4));
     }
 
 
@@ -779,19 +779,19 @@ struct UniNodeImpl(This)
 
     unittest
     {
-        auto obj = This.emptyObject;
+        auto obj = UniNode.emptyObject;
 
-        auto intNode = This(int.max);
-        auto uintNode = This(uint.max);
-        auto fNode = This(float.nan);
-        auto textNode = This("node");
-        auto boolNode = This(true);
+        auto intNode = UniNode(int.max);
+        auto uintNode = UniNode(uint.max);
+        auto fNode = UniNode(float.nan);
+        auto textNode = UniNode("node");
+        auto boolNode = UniNode(true);
         ubyte[] bytes = [1, 2, 3];
-        auto binNode = This(bytes);
-        auto nilNode = This();
+        auto binNode = UniNode(bytes);
+        auto nilNode = UniNode();
 
-        auto arrNode = This([intNode, fNode, textNode, nilNode]);
-        auto objNode = This([
+        auto arrNode = UniNode([intNode, fNode, textNode, nilNode]);
+        auto objNode = UniNode([
                 "i": intNode,
                 "ui": uintNode,
                 "f": fNode,
@@ -899,7 +899,7 @@ template isUniNodeInnerType(T)
 
 template isUniNodeArray(T, This)
 {
-    enum isUniNodeArray = isArray!T && is(Unqual!(ForeachType!T) == This);
+    enum isUniNodeArray = isTraitsArray!T && is(Unqual!(ForeachType!T) == This);
 }
 
 
@@ -944,7 +944,7 @@ template isUnsignedNumeric(T)
  */
 template isRawData(T)
 {
-    enum isRawData = isArray!T && is(Unqual!(ForeachType!T) == ubyte);
+    enum isRawData = isTraitsArray!T && is(Unqual!(ForeachType!T) == ubyte);
 }
 
 
