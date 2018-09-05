@@ -489,6 +489,11 @@ struct UniNodeImpl(This)
             }
             else static if (isFloatingPoint!T)
             {
+                if (_kind == Kind.integer)
+                    return cast(T)(_int);
+                if (_kind == Kind.uinteger)
+                    return cast(T)(_uint);
+
                 checkType!T(Kind.floating);
                 return cast(T)(_float);
             }
