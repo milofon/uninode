@@ -39,7 +39,7 @@ T deserializeUniNode(T)(UniNode src)
 
 struct UniNodeSerializer
 {
-    enum isSupportedValueType(T) = isUniNodeType!(T, UniNode) || is(T == UniNode);
+    enum isSupportedValueType(T) = UniNode.isUniNodeType!(T) || is(T == UniNode);
 
 
     private

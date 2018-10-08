@@ -9,19 +9,21 @@
 
 module uninode.core;
 
-private
-{
-    import std.traits;
-    import std.traits : isTraitsArray = isArray;
-    import std.variant : maxSize;
-    import std.format : fmt = format;
-    import std.array : appender;
-    import std.conv : to;
-}
 
 
 mixin template UniNodeMixin(This)
 {
+    private
+    {
+        import std.traits;
+        import std.traits : isTraitsArray = isArray;
+        import std.variant : maxSize;
+        import std.format : fmt = format;
+        import std.array : appender;
+        import std.conv : to;
+        import uninode.core;
+    }
+
 @safe:
     private nothrow
     {
@@ -337,7 +339,7 @@ mixin template UniNodeMixin(This)
     alias opDollar = length;
 
 
-    inout(T) get(T)() inout @trusted if (isUniNodeType!(T, This))
+    inout(T) get(T)() inout @trusted if (isUniNodeType!(T))
     {
         static if (isSignedNumeric!T)
         {
@@ -391,12 +393,12 @@ mixin template UniNodeMixin(This)
             else
                 return cast(inout(T))_raw;
         }
-        else static if (isUniNodeArray!T)
+        else static if (isUniNodeArray!(T))
         {
             checkType!T(Kind.array);
             return _array;
         }
-        else static if (isUniNodeObject!T)
+        else static if (isUniNodeObject!(T))
         {
             checkType!T(Kind.object);
             return _object;
@@ -716,6 +718,13 @@ mixin template UniNodeMixin(This)
     }
 
 
+    package template isUniNodeType(T)
+    {
+        enum isUniNodeType = isUniNodeInnerType!T
+            || isUniNodeArray!(T) || isUniNodeObject!(T);
+    }
+
+
 private:
 
 
@@ -723,6 +732,73 @@ private:
     {
         enforceUniNode(_kind == target,
                 fmt!("Trying to get %s but have %s.")(T.stringof, _kind));
+    }
+
+
+    template TypeEnum(U)
+    {
+        import std.array : join;
+        mixin("enum TypeEnum : ubyte { " ~ [FieldNameTuple!U].join(", ") ~ " }");
+    }
+
+    /**
+     * Check for an integer signed number
+     */
+    template isSignedNumeric(T)
+    {
+        enum isSignedNumeric = isNumeric!T && isSigned!T && !isFloatingPoint!T;
+    }
+
+    /**
+     * Check for an integer unsigned number
+     */
+    template isUnsignedNumeric(T)
+    {
+        enum isUnsignedNumeric = isNumeric!T && isUnsigned!T && !isFloatingPoint!T;
+    }
+
+    /**
+     * Checking for binary data
+     */
+    template isRawData(T)
+    {
+        enum isRawData = isTraitsArray!T && is(Unqual!(ForeachType!T) == ubyte);
+    }
+
+
+    template isUniNodeInnerType(T)
+    {
+        enum isUniNodeInnerType = isNumeric!T || isBoolean!T || isSomeString!T
+            || is(T == typeof(null)) || isRawData!T;
+    }
+
+
+    template isUniNodeArray(T)
+    {
+        enum isUniNodeArray = isTraitsArray!T && is(Unqual!(ForeachType!T) == This);
+    }
+
+
+    template isUniNodeObject(T)
+    {
+        enum isUniNodeObject = isAssociativeArray!T
+            && is(Unqual!(ForeachType!T) == This) && is(KeyType!T == string);
+    }
+
+
+    auto assumeSafe(F)(F fun) @safe
+        if (isFunctionPointer!F || isDelegate!F)
+    {
+        static if (hasFunctionAttributes!(F, "@safe"))
+            return fun;
+        else
+        {
+            enum attrs = (functionAttributes!F & ~FunctionAttribute.system)
+                | FunctionAttribute.safe;
+            return () @trusted {
+                return cast(SetFunctionAttributes!(F, functionLinkage!F, attrs)) fun;
+            } ();
+        }
     }
 }
 
@@ -758,90 +834,5 @@ void enforceUniNode(T)(T value, lazy string msg = "UniNode exception",
 {
     if (!value)
         throw new UniNodeException(msg, file, line);
-}
-
-
-
-package template isUniNodeType(T, This)
-{
-    enum isUniNodeType = isUniNodeInnerType!T
-        || isUniNodeArray!(T, This) || isUniNodeObject!(T, This);
-}
-
-
-private:
-
-
-template TypeEnum(U)
-{
-	import std.array : join;
-	mixin("enum TypeEnum : ubyte { " ~ [FieldNameTuple!U].join(", ") ~ " }");
-}
-
-
-/**
- * Check for an integer signed number
- */
-template isSignedNumeric(T)
-{
-    enum isSignedNumeric = isNumeric!T && isSigned!T && !isFloatingPoint!T;
-}
-
-
-/**
- * Check for an integer unsigned number
- */
-template isUnsignedNumeric(T)
-{
-    enum isUnsignedNumeric = isNumeric!T && isUnsigned!T && !isFloatingPoint!T;
-}
-
-
-/**
- * Checking for binary data
- */
-template isRawData(T)
-{
-    enum isRawData = isTraitsArray!T && is(Unqual!(ForeachType!T) == ubyte);
-}
-
-
-
-template isUniNodeInnerType(T)
-{
-    enum isUniNodeInnerType = isNumeric!T || isBoolean!T || isSomeString!T
-        || is(T == typeof(null)) || isRawData!T;
-}
-
-
-
-template isUniNodeArray(T, This)
-{
-    enum isUniNodeArray = isTraitsArray!T && is(Unqual!(ForeachType!T) == This);
-}
-
-
-
-template isUniNodeObject(T, This)
-{
-    enum isUniNodeObject = isAssociativeArray!T
-        && is(Unqual!(ForeachType!T) == This) && is(KeyType!T == string);
-}
-
-
-
-auto assumeSafe(F)(F fun) @safe
-    if (isFunctionPointer!F || isDelegate!F)
-{
-    static if (hasFunctionAttributes!(F, "@safe"))
-        return fun;
-    else
-    {
-        enum attrs = (functionAttributes!F & ~FunctionAttribute.system)
-            | FunctionAttribute.safe;
-        return () @trusted {
-            return cast(SetFunctionAttributes!(F, functionLinkage!F, attrs)) fun;
-        } ();
-    }
 }
 

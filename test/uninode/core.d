@@ -15,6 +15,12 @@ private
 }
 
 
+struct UniNodeTest
+{
+    mixin UniNodeMixin!UniNodeTest;
+}
+
+
 class TestCore
 {
     mixin UnitTest;
@@ -199,6 +205,15 @@ class TestCore
         }
 
         assertEquals(nodes.length, 4);
+    }
+
+
+    @Test
+    void testOtherImplement()
+    {
+        auto node = UniNodeTest(1);
+        auto anode = UniNodeTest([node, node]);
+        assertEquals(anode.get!(UniNodeTest[]).length, 2);
     }
 }
 
