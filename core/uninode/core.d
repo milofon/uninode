@@ -717,10 +717,7 @@ mixin template UniNodeMixin(This)
     void opOpAssign(string op)(This elem) if (op == "~")
     {
         enforceUniNode(_kind == Kind.array, "Expected " ~ This.stringof ~ " array");
-        if (elem.kind == Kind.array)
-            _array ~= elem._array;
-        else
-            _array ~= elem;
+        _array ~= elem;
     }
 
 
@@ -731,8 +728,8 @@ mixin template UniNodeMixin(This)
         assert(anode.length == 2);
         anode ~= node;
         anode ~= anode;
-        assert(anode.length == 6);
-        assert(anode[$-1] == node);
+        assert(anode.length == 4);
+        assert(anode[$-2] == node);
     }
 
 
