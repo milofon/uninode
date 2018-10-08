@@ -9,6 +9,7 @@ module uninode;
 
 public
 {
-    import uninode.core : UniNode;
+    import uninode.core : UniNode, UniNodeException, enforceUniNode;
+    import uninode.serialization;
 }
 

@@ -11,7 +11,6 @@ module uninode.core;
 
 private
 {
-    import std.algorithm.comparison : equal;
     import std.traits;
     import std.traits : isTraitsArray = isArray;
     import std.variant : maxSize;
@@ -21,121 +20,12 @@ private
 }
 
 
-/**
- * Universal structure for data storage of different types
- */
-struct UniNode
+mixin template UniNodeMixin(This)
 {
 @safe:
-    UniNodeImpl!UniNode node;
-    alias node this;
-
-
-    this(V)(V val) inout
+    private nothrow
     {
-        node = UniNodeImpl!UniNode(val);
-    }
-}
-
-
-
-unittest
-{
-    import std.concurrency;
-
-    static void child(Tid parent, UniNode tail)
-    {
-        bool runned = true;
-        while(runned)
-            receive(
-                (UniNode nodes) {
-                    nodes.appendArrayElement(tail);
-                    parent.send(nodes);
-                },
-                (OwnerTerminated e) {
-                    runned = false;
-                }
-            );
-    }
-
-    auto tail = immutable(UniNode)(1);
-    auto p = spawn(&child, thisTid(), tail);
-    auto nodes = UniNode.emptyArray();
-
-    foreach (i; 0..4)
-    {
-        p.send(nodes);
-        nodes = receiveOnly!UniNode;
-    }
-
-    assert(nodes.length == 4);
-}
-
-
-
-unittest
-{
-    import std.meta : AliasSeq;
-
-    alias IUniNode = immutable(UniNode);
-    alias CUniNode = const(UniNode);
-
-    void testImNode(TT)(immutable(UniNode) imnode, TT initVal)
-    {
-        assert(imnode.kind != UniNode.Kind.nil);
-        auto ret = imnode.get!TT;
-        assert(is(typeof(ret) == immutable(TT)));
-        assert(ret == initVal);
-    }
-
-    void testConstNode(TT)(const(UniNode) cnode, TT initVal)
-    {
-        assert(cnode.kind != UniNode.Kind.nil);
-        auto ret = cnode.get!TT;
-        assert(is(typeof(ret) == const(TT)));
-        assert(ret == initVal);
-    }
-
-    auto ibool = IUniNode(true);
-    testImNode!bool(ibool, true);
-
-    foreach (TT; AliasSeq!(byte, short, int, long))
-    {
-        immutable(TT) ival = 12;
-
-        auto inode = IUniNode(ival);
-        testImNode!TT(inode, ival);
-
-        auto cnode = CUniNode(ival);
-        testConstNode!TT(cnode, ival);
-    }
-
-
-    foreach (TT; AliasSeq!(ubyte, ushort, uint, ulong))
-    {
-        immutable(TT) ival = 13U;
-        auto inode = IUniNode(ival);
-        testImNode!TT(inode, ival);
-
-        auto cnode = CUniNode(ival);
-        testConstNode!TT(cnode, ival);
-    }
-
-
-    auto snode = IUniNode("one");
-    testImNode!string(snode, "one");
-}
-
-
-/**
- * Implementation universal structure for data storage of different types
- */
-struct UniNodeImpl(This)
-{
-@safe:
-
-    private
-    {
+        alias Bytes = immutable(ubyte)[];
         union U {
             typeof(null) nil;
             bool boolean;
@@ -143,7 +33,7 @@ struct UniNodeImpl(This)
             long integer;
             real floating;
             string text;
-            ubyte[] raw;
+            Bytes raw;
             This[] array;
             This[string] object;
         }
@@ -206,9 +96,9 @@ struct UniNodeImpl(This)
             return getDataAs!string();
         }
 
-        @property ref inout(ubyte[]) _raw() inout
+        @property ref inout(Bytes) _raw() inout
         {
-            return getDataAs!(ubyte[])();
+            return getDataAs!(Bytes)();
         }
     }
 
@@ -216,71 +106,23 @@ struct UniNodeImpl(This)
     alias Kind = TypeEnum!U;
 
 
-    Kind kind() @property inout pure
+    Kind kind() @property inout nothrow pure
     {
         return _kind;
     }
 
 
-    static This emptyObject() @property
-    {
-        return This(cast(This[string])null);
-    }
-
-
-    this(This[string] val)
-    {
-        _kind = Kind.object;
-        _object = val;
-    }
-
-
-    unittest
-    {
-        auto node = UniNode.emptyObject;
-        assert(node.isObject);
-    }
-
-
-    inout(This)* opBinaryRight(string op)(string key) inout if (op == "in")
-    {
-        enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
-        return key in _object;
-    }
-
-
-    unittest
-    {
-        auto node = UniNode(1);
-        auto mnode = UniNode(["one": node, "two": node]);
-        assert (mnode.isObject);
-        assert("one" in mnode);
-    }
-
-
-    static This emptyArray() @property
-    {
-        return This(cast(This[])null);
-    }
-
-
-    this(This[] val)
-    {
-        _kind = Kind.array;
-        _array = val;
-    }
-
-
-    unittest
-    {
-        auto node = UniNode.emptyArray;
-        assert(node.isArray);
-    }
-
-
-    this(typeof(null))
+    this(typeof(null)) nothrow
     {
         _kind = Kind.nil;
+    }
+
+    /**
+     * Check node is null
+     */
+    bool isNull() inout nothrow pure
+    {
+        return _kind == Kind.nil;
     }
 
 
@@ -293,25 +135,7 @@ struct UniNodeImpl(This)
     }
 
 
-    this(T)(T val) inout if (isBoolean!T)
-    {
-        _kind = Kind.boolean;
-        (cast(bool)_bool) = val;
-    }
-
-
-    unittest
-    {
-        auto node = UniNode(false);
-        assert (node.kind == UniNode.Kind.boolean);
-        assert (node.get!bool == false);
-
-        auto nodei = UniNode(0);
-        assert (nodei.kind == UniNode.Kind.integer);
-    }
-
-
-    this(T)(T val) inout if (isUnsignedNumeric!T)
+    this(T)(T val) inout nothrow if (isUnsignedNumeric!T)
     {
         _kind = Kind.uinteger;
         (cast(ulong)_uint) = val;
@@ -331,7 +155,7 @@ struct UniNodeImpl(This)
     }
 
 
-    this(T)(T val) inout if (isSignedNumeric!T)
+    this(T)(T val) inout nothrow if (isSignedNumeric!T)
     {
         _kind = Kind.integer;
         (cast(long)_int) = val;
@@ -351,7 +175,25 @@ struct UniNodeImpl(This)
     }
 
 
-    this(T)(T val) inout if (isFloatingPoint!T)
+    this(T)(T val) inout nothrow if (isBoolean!T)
+    {
+        _kind = Kind.boolean;
+        (cast(bool)_bool) = val;
+    }
+
+
+    unittest
+    {
+        auto node = UniNode(true);
+        assert (node.kind == UniNode.Kind.boolean);
+        assert (node.get!bool == true);
+
+        auto nodei = UniNode(0);
+        assert (nodei.kind == UniNode.Kind.integer);
+    }
+
+
+    this(T)(T val) inout nothrow if (isFloatingPoint!T)
     {
         _kind = Kind.floating;
         (cast(real)_float) = val;
@@ -371,7 +213,7 @@ struct UniNodeImpl(This)
     }
 
 
-    this(T)(T val) inout if(isSomeString!T)
+    this(T)(T val) inout nothrow if(isSomeString!T)
     {
         _kind = Kind.text;
         (cast(string)_string) = val;
@@ -387,13 +229,13 @@ struct UniNodeImpl(This)
     }
 
 
-    this(T)(T val) if (isRawData!T)
+    this(T)(T val) inout nothrow if (isRawData!T)
     {
         _kind = Kind.raw;
-        static if (isStaticArray!T)
-            _raw = val.dup;
+        static if (isStaticArray!T || isMutable!T)
+            (cast(Bytes)_raw) = val.idup;
         else
-            _raw = val;
+            (cast(Bytes)_raw) = val;
     }
 
 
@@ -408,19 +250,68 @@ struct UniNodeImpl(This)
         node = UniNode(stArr);
         assert (node.kind == UniNode.Kind.raw);
         assert (node.get!(ubyte[3]) == [1, 2, 3]);
+
+        Bytes bb = [1, 2, 3];
+        node = UniNode(bb);
+        assert (node.kind == UniNode.Kind.raw);
+        assert (node.get!(ubyte[]) == [1, 2, 3]);
+    }
+
+
+    this(This[] val) nothrow
+    {
+        _kind = Kind.array;
+        _array = val;
+    }
+
+
+    static This emptyArray() @property nothrow
+    {
+        return This(cast(This[])null);
+    }
+
+    /**
+     * Check node is array
+     */
+    bool isArray() inout pure nothrow
+    {
+        return _kind == Kind.array;
     }
 
 
     unittest
     {
-        auto node = UniNode();
-        assert (node.isNull);
+        auto node = UniNode.emptyArray;
+        assert(node.isArray);
+        assert(node.length == 0);
+    }
 
-        auto anode = UniNode([node, node]);
-        assert (anode.isArray);
 
-        auto mnode = UniNode(["one": node, "two": node]);
-        assert (mnode.isObject);
+    this(This[string] val) nothrow
+    {
+        _kind = Kind.object;
+        _object = val;
+    }
+
+
+    static This emptyObject() @property nothrow
+    {
+        return This(cast(This[string])null);
+    }
+
+    /**
+     * Check node is object
+     */
+    bool isObject() inout
+    {
+        return _kind == Kind.object;
+    }
+
+
+    unittest
+    {
+        auto node = UniNode.emptyObject;
+        assert(node.isObject);
     }
 
 
@@ -446,158 +337,116 @@ struct UniNodeImpl(This)
     alias opDollar = length;
 
 
-    void appendArrayElement(This element)
-    {
-        enforceUniNode(_kind == Kind.array,
-                "'appendArrayElement' only allowed for array types, not "
-                ~.to!string(_kind)~".");
-        _array ~= element;
-    }
-
-
-    unittest
-    {
-        auto node = UniNode(1);
-        auto anode = UniNode([node, node]);
-        assert(anode.length == 2);
-        anode.appendArrayElement(node);
-        assert(anode.length == 3);
-        assert(anode[$-1] == node);
-    }
-
-
     inout(T) get(T)() inout @trusted if (isUniNodeType!(T, This))
     {
-        try {
-            static if (isSignedNumeric!T)
+        static if (isSignedNumeric!T)
+        {
+            if (_kind == Kind.uinteger)
             {
-                if (_kind == Kind.uinteger)
-                    return cast(T)(_uint);
-                checkType!T(Kind.integer);
+                auto val = _uint;
+                enforceUniNode(val < T.max, "Unsigned value great max");
+                return cast(T)(val);
+            }
+            checkType!T(Kind.integer);
+            return cast(T)(_int);
+        }
+        else static if (isUnsignedNumeric!T)
+        {
+            if (_kind == Kind.integer)
+            {
+                auto val = _int;
+                enforceUniNode(val >= 0, "Signed value less zero");
+                return cast(T)(val);
+            }
+            checkType!T(Kind.uinteger);
+            return cast(T)(_uint);
+        }
+        else static if (isBoolean!T)
+        {
+            checkType!T(Kind.boolean);
+            return _bool;
+        }
+        else static if (isFloatingPoint!T)
+        {
+            if (_kind == Kind.integer)
                 return cast(T)(_int);
-            }
-            else static if (isUnsignedNumeric!T)
-            {
-                if (_kind == Kind.integer)
-                {
-                    auto val = _int;
-                    if (val >= 0)
-                        return cast(T)(val);
-                }
-                checkType!T(Kind.uinteger);
+            if (_kind == Kind.uinteger)
                 return cast(T)(_uint);
-            }
-            else static if (isFloatingPoint!T)
-            {
-                if (_kind == Kind.integer)
-                    return cast(T)(_int);
-                if (_kind == Kind.uinteger)
-                    return cast(T)(_uint);
 
-                checkType!T(Kind.floating);
-                return cast(T)(_float);
-            }
-            else static if (isRawData!T)
-            {
-                checkType!T(Kind.raw);
-                if (_kind == Kind.nil)
-                    return inout(T).init;
+            checkType!T(Kind.floating);
+            return cast(T)(_float);
+        }
+        else static if (isSomeString!T)
+        {
+            if (_kind == Kind.raw)
+                return cast(T)_raw;
+            checkType!T(Kind.text);
+            return _string;
+        }
+        else static if (isRawData!T)
+        {
+            checkType!T(Kind.raw);
+            static if (isStaticArray!T)
+                return cast(inout(T))_raw[0..T.length];
+            else
+                return cast(inout(T))_raw;
+        }
+        else static if (isUniNodeArray!T)
+        {
+            checkType!T(Kind.array);
+            return _array;
+        }
+        else static if (isUniNodeObject!T)
+        {
+            checkType!T(Kind.object);
+            return _object;
+        }
+        else
+            enforceUniNode(false, fmt!"Not support type '%s'"(T.stringof));
+    }
 
-                static if (isStaticArray!T)
-                    return cast(inout(T))_raw[0..T.length];
-                else
-                    return cast(inout(T))_raw;
-            }
-            else static if (isSomeString!T)
+
+    int opApply(F)(scope F dg)
+    {
+        auto fun = assumeSafe!F(dg);
+        alias Params = Parameters!F;
+
+        static if (Params.length == 1 && is(Unqual!(Params[0]) : This))
+        {
+            enforceUniNode(_kind == Kind.array,
+                    "Expected " ~ This.stringof ~ " array");
+            foreach (ref node; _array)
             {
-                if (_kind == Kind.raw)
-                    return cast(T)_raw;
-                else if (_kind == Kind.text)
-                    return _string;
-                else
+                if (auto ret = fun(node))
+                    return ret;
+            }
+        }
+        else static if (Params.length == 2 && is(Unqual!(Params[1]) : This))
+        {
+            static if (isSomeString!(Params[0]))
+            {
+                enforceUniNode(_kind == Kind.object,
+                        "Expected " ~ This.stringof ~ " object");
+                foreach (string key, ref node; _object)
                 {
-                    checkType!T(Kind.text);
-                    return "";
+                    if (auto ret = fun(key, node))
+                        return ret;
                 }
-            }
-            else static if (isBoolean!T)
-            {
-                checkType!T(Kind.boolean);
-                return _bool;
-            }
-            else static if (isTraitsArray!T && is(ForeachType!T == This))
-            {
-                checkType!T(Kind.array);
-                return _array;
-            }
-            else static if (isAssociativeArray!T
-                    && is(ForeachType!T == This) && is(KeyType!T == string))
-            {
-                checkType!T(Kind.object);
-                return _object;
             }
             else
-                enforceUniNode(false);
-        }
-        catch (Throwable e)
-            throw new UniNodeException(e.msg, e.file, e.line, e.next);
-    }
+            {
+                enforceUniNode(_kind == Kind.array,
+                        "Expected " ~ This.stringof ~ " array");
 
-
-    int opApply(int delegate(ref string idx, ref This obj) @safe dg)
-    {
-        enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
-        foreach (idx, ref v; _object)
-        {
-            if (auto ret = dg(idx, v))
-                return ret;
+                foreach (size_t key, ref node; _array)
+                {
+                    if (auto ret = fun(key, node))
+                        return ret;
+                }
+            }
         }
+
         return 0;
-    }
-
-
-    unittest
-    {
-        auto node = UniNode(1);
-        auto mnode = UniNode(["one": node, "two": node]);
-        assert (mnode.isObject);
-
-        string[] keys;
-        UniNode[] nodes;
-        foreach (string key, ref UniNode node; mnode)
-        {
-            keys ~= key;
-            nodes ~= node;
-        }
-
-        assert(keys == ["two", "one"]);
-        assert(nodes.length == 2);
-    }
-
-
-    int opApply(scope int delegate(ref This obj) @safe dg)
-    {
-        enforceUniNode(_kind == Kind.array, "Expected " ~ This.stringof ~ " array");
-        foreach (ref v; _array)
-        {
-            if (auto ret = dg(v))
-                return ret;
-        }
-        return 0;
-    }
-
-
-    unittest
-    {
-        auto node = UniNode(1);
-        auto mnode = UniNode([node, node]);
-        assert (mnode.isArray);
-
-        UniNode[] nodes;
-        foreach (ref UniNode node; mnode)
-            nodes ~= node;
-
-        assert(nodes.length == 2);
     }
 
 
@@ -629,7 +478,7 @@ struct UniNodeImpl(This)
             case raw:
                 return _raw == other._raw;
             case array:
-                return equal(_array, other._array);
+                return _array == other._array;
             case object:
                 return _object == other._object;
         }
@@ -653,61 +502,19 @@ struct UniNodeImpl(This)
     }
 
 
-    ref inout(This) opIndex(size_t idx) inout
-    {
-        enforceUniNode(_kind == Kind.array, "Expected " ~ This.stringof ~ " array");
-        return _array[idx];
-    }
-
-
-    unittest
-    {
-        auto arr = UniNode.emptyArray;
-        foreach(i; 1..10)
-            arr.appendArrayElement(UniNode(i));
-        assert(arr[1] == UniNode(2));
-    }
-
-
-    ref This opIndex(string key)
+    inout(This)* opBinaryRight(string op)(string key) inout if (op == "in")
     {
         enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
-        return _object[key];
+        return key in _object;
     }
 
 
     unittest
     {
-        UniNode[string] obj;
-        foreach(i; 1..10)
-            obj[i.to!string] = UniNode(i*i);
-
-        UniNode node = UniNode(obj);
-        assert(node["2"] == UniNode(4));
-    }
-
-
-    ref This opIndexAssign(This val, string key)
-    {
-        return opIndexAssign(val, key);
-    }
-
-
-    ref This opIndexAssign(ref This val, string key)
-    {
-        enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
-        return _object[key] = val;
-    }
-
-
-    unittest
-    {
-        UniNode node = UniNode.emptyObject;
-        UniNode[string] obj;
-        foreach(i; 1..10)
-            node[i.to!string] = UniNode(i*i);
-
-        assert(node["2"] == UniNode(4));
+        auto node = UniNode(1);
+        auto mnode = UniNode(["one": node, "two": node]);
+        assert (mnode.isObject);
+        assert("one" in mnode);
     }
 
 
@@ -715,7 +522,7 @@ struct UniNodeImpl(This)
     {
         auto buff = appender!string;
 
-        void fun(ref UniNodeImpl!This node) @safe
+        void fun(ref This node) @safe
         {
             switch (node.kind)
             {
@@ -761,7 +568,7 @@ struct UniNodeImpl(This)
                     buff.put("[");
                     size_t len = node.length;
                     size_t count;
-                    foreach (i, v; node.get!(This[]))
+                    foreach (size_t i, ref This v; node)
                     {
                         count++;
                         fun(v);
@@ -809,55 +616,103 @@ struct UniNodeImpl(This)
         assert(objNode.toString.length);
     }
 
-    /**
-     * cast to This type
-     */
-    inout(This) toThis() inout
+
+    unittest
     {
-        return () @trusted { return cast(This)this; }();
+        auto node = UniNode();
+        assert (node.isNull);
+
+        auto anode = UniNode([node, node]);
+        assert (anode.isArray);
+
+        auto mnode = UniNode(["one": node, "two": node]);
+        assert (mnode.isObject);
     }
 
-    /**
-     * Check node is null
-     */
-    bool isNull() inout
-    {
-        return _kind == Kind.nil;
-    }
 
-    /**
-     * Check node is object
-     */
-    bool isObject() inout
+    ref inout(This) opIndex(size_t idx) inout
     {
-        return _kind == Kind.object;
-    }
-
-    /**
-     * Check node is array
-     */
-    bool isArray() inout
-    {
-        return _kind == Kind.array;
+        enforceUniNode(_kind == Kind.array, "Expected " ~ This.stringof ~ " array");
+        return _array[idx];
     }
 
 
     unittest
     {
-        UniNode node;
-        assert(node.isNull);
-        assert(!node.isObject);
-        assert(!node.isArray);
+        auto arr = UniNode.emptyArray;
+        foreach(i; 1..10)
+            arr ~= UniNode(i);
+        assert(arr[1] == UniNode(2));
+    }
 
-        node = UniNode.emptyObject;
-        assert(!node.isNull);
-        assert(node.isObject);
-        assert(!node.isArray);
 
-        node = UniNode.emptyArray;
-        assert(!node.isNull);
-        assert(!node.isObject);
-        assert(node.isArray);
+    ref inout(This) opIndex(string key) inout
+    {
+        enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
+        return _object[key];
+    }
+
+
+    unittest
+    {
+        UniNode[string] obj;
+        foreach(i; 1..10)
+            obj[i.to!string] = UniNode(i*i);
+
+        UniNode node = UniNode(obj);
+        assert(node["2"] == UniNode(4));
+    }
+
+
+    ref This opIndexAssign(This val, string key)
+    {
+        return opIndexAssign(val, key);
+    }
+
+
+    ref This opIndexAssign(ref This val, string key)
+    {
+        enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
+        return _object[key] = val;
+    }
+
+
+    unittest
+    {
+        UniNode node = UniNode.emptyObject;
+        UniNode[string] obj;
+        foreach(i; 1..10)
+            node[i.to!string] = UniNode(i*i);
+
+        assert(node["2"] == UniNode(4));
+    }
+
+
+    void opOpAssign(string op)(This[] elem) if (op == "~")
+    {
+        opOpAssign!op(UniNode(elem));
+    }
+
+
+    void opOpAssign(string op)(This elem) if (op == "~")
+    {
+        enforceUniNode(_kind == Kind.array, "Expected " ~ This.stringof ~ " array");
+        if (elem.kind == Kind.array)
+            _array ~= elem._array;
+        else
+            _array ~= elem;
+    }
+
+
+    unittest
+    {
+        auto node = UniNode(1);
+        auto anode = UniNode([node, node]);
+        assert(anode.length == 2);
+        anode ~= node;
+        anode ~= anode;
+        assert(anode.length == 6);
+        assert(anode[$-1] == node);
     }
 
 
@@ -873,46 +728,44 @@ private:
 
 
 /**
+ * Universal structure for data storage of different types
+ */
+struct UniNode
+{
+@safe:
+    mixin UniNodeMixin!UniNode;
+}
+
+
+/**
  * UniNode error class
  */
 class UniNodeException : Exception
 {
     this(string msg, string file = __FILE__, size_t line = __LINE__,
-            Throwable next = null) @safe
+            Throwable next = null) @safe pure
     {
         super(msg, file, line, next);
     }
 }
 
 
+/**
+ * Enforce UniNodeException
+ */
+void enforceUniNode(T)(T value, lazy string msg = "UniNode exception",
+        string file = __FILE__, size_t line = __LINE__) @safe pure
+{
+    if (!value)
+        throw new UniNodeException(msg, file, line);
+}
 
-template isUniNodeType(T, This)
+
+
+package template isUniNodeType(T, This)
 {
     enum isUniNodeType = isUniNodeInnerType!T
         || isUniNodeArray!(T, This) || isUniNodeObject!(T, This);
-}
-
-
-
-template isUniNodeInnerType(T)
-{
-    enum isUniNodeInnerType = isNumeric!T || isBoolean!T || isSomeString!T
-        || is(T == typeof(null)) || isRawData!T;
-}
-
-
-
-template isUniNodeArray(T, This)
-{
-    enum isUniNodeArray = isTraitsArray!T && is(Unqual!(ForeachType!T) == This);
-}
-
-
-
-template isUniNodeObject(T, This)
-{
-    enum isUniNodeObject = isAssociativeArray!T
-        && is(Unqual!(ForeachType!T) == This) && is(KeyType!T == string);
 }
 
 
@@ -922,7 +775,7 @@ private:
 template TypeEnum(U)
 {
 	import std.array : join;
-	mixin("enum TypeEnum { " ~ [FieldNameTuple!U].join(", ") ~ " }");
+	mixin("enum TypeEnum : ubyte { " ~ [FieldNameTuple!U].join(", ") ~ " }");
 }
 
 
@@ -954,10 +807,41 @@ template isRawData(T)
 
 
 
-void enforceUniNode(T)(T value, lazy string msg = "UniNode exception",
-        string file = __FILE__, size_t line = __LINE__) @safe
+template isUniNodeInnerType(T)
 {
-    if (!value)
-        throw new UniNodeException(msg, file, line);
+    enum isUniNodeInnerType = isNumeric!T || isBoolean!T || isSomeString!T
+        || is(T == typeof(null)) || isRawData!T;
+}
+
+
+
+template isUniNodeArray(T, This)
+{
+    enum isUniNodeArray = isTraitsArray!T && is(Unqual!(ForeachType!T) == This);
+}
+
+
+
+template isUniNodeObject(T, This)
+{
+    enum isUniNodeObject = isAssociativeArray!T
+        && is(Unqual!(ForeachType!T) == This) && is(KeyType!T == string);
+}
+
+
+
+auto assumeSafe(F)(F fun) @safe
+    if (isFunctionPointer!F || isDelegate!F)
+{
+    static if (hasFunctionAttributes!(F, "@safe"))
+        return fun;
+    else
+    {
+        enum attrs = (functionAttributes!F & ~FunctionAttribute.system)
+            | FunctionAttribute.safe;
+        return () @trusted {
+            return cast(SetFunctionAttributes!(F, functionLinkage!F, attrs)) fun;
+        } ();
+    }
 }
 

@@ -4,9 +4,7 @@ authors "Maksim Galanin"
 copyright "Copyright (c) 2015-2018, Milofon Project. All rights reserved."
 license "BSD 3-clause"
 
-targetType "library"
 targetPath "out"
-targetName "uninode"
 
 dependency ":core" version="*"
 dependency ":serialization" version="*"
@@ -14,3 +12,18 @@ dependency ":serialization" version="*"
 subPackage "core"
 subPackage "serialization"
 
+
+configuration "library" {
+  targetType "library"
+  targetName "uninode"
+}
+
+
+configuration "test" {
+  dependency "d-unit" version="~>0.8.1"
+  targetType "executable"
+
+  versions "UnitTestVersion"
+
+  sourcePaths "test"
+}

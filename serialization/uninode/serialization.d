@@ -105,7 +105,7 @@ struct UniNodeSerializer
 
     void endWriteArrayEntry(ElementTypeTraits)(size_t index)
     {
-        _stack[$-1].appendArrayElement(_current);
+        _stack[$-1] ~= _current;
     }
 
 
@@ -185,34 +185,5 @@ struct UniNodeSerializer
     {
         return _current.kind == UniNode.Kind.nil;
     }
-}
-
-
-
-unittest
-{
-    struct Foo
-    {
-        uint b;
-        int a;
-        ubyte[3] vector;
-        string text;
-    }
-
-    auto fd = Foo(3, 1, [1, 2, 3], "one");
-    auto data = serializeToUniNode(fd);
-    assert(data.kind == UniNode.Kind.object);
-
-    assert(data["text"].get!string == "one");
-    assert(data["text"].kind == UniNode.Kind.text);
-
-    assert(data["b"].get!uint == 3);
-    assert(data["b"].kind == UniNode.Kind.uinteger);
-
-    assert(data["a"].get!int == 1);
-    assert(data["a"].kind == UniNode.Kind.integer);
-
-    assert(data["vector"].get!(ubyte[]) == [1, 2, 3]);
-    assert(data["vector"].kind == UniNode.Kind.raw);
 }
 
