@@ -408,7 +408,7 @@ mixin template UniNodeMixin(This)
     }
 
 
-    int opApply(F)(scope F dg)
+    private int _opApply(F)(scope F dg)
     {
         auto fun = assumeSafe!F(dg);
         alias Params = Parameters!F;
@@ -449,6 +449,24 @@ mixin template UniNodeMixin(This)
         }
 
         return 0;
+    }
+
+
+    int opApply(scope int delegate(ref ulong idx, ref This node) dg)
+    {
+        return _opApply!(int delegate(ref ulong idx, ref This node))(dg);
+    }
+
+
+    int opApply(scope int delegate(ref string idx, ref This node) dg)
+    {
+        return _opApply!(int delegate(ref string idx, ref This node))(dg);
+    }
+
+
+    int opApply(scope int delegate(ref This node) dg)
+    {
+        return _opApply!(int delegate(ref This node))(dg);
     }
 
 
