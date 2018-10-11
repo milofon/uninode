@@ -17,7 +17,13 @@ private
 
 struct UniNodeTest
 {
-    mixin UniNodeMixin!UniNodeTest;
+    UniNodeImpl!UniNodeTest node;
+    alias node this;
+
+    this(V)(V val)
+    {
+        node = UniNodeImpl!UniNodeTest(val);
+    }
 }
 
 
@@ -34,11 +40,12 @@ class TestCore
 
 
     @Test
-    void testImmutableInstance()
+    void testInstance()
     {
         auto inode = immutable(UniNode)(1U);
         assertEquals(inode.kind, UniNode.Kind.uinteger);
         assertFalse(inode.isNull);
+        expectThrows(inode.get!string == "one");
     }
 
 
