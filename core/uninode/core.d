@@ -476,7 +476,7 @@ struct UniNodeImpl(This)
     }
 
 
-    bool opEquals(ref const This other) const
+    bool opEquals(ref const This other) const @trusted
     {
         if (_kind != other.kind)
             return false;
