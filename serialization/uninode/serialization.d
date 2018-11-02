@@ -9,34 +9,46 @@ module uninode.serialization;
 
 public
 {
-    import vibe.data.serialization : optional, byName;
+    import vibe.data.serialization : byName, optional;
 }
 
 private
 {
     import vibe.data.serialization :
-                vSerialize = serialize,
-                vDeserialize = deserialize;
+                vDeserialize = deserialize,
+                vSerialize = serialize;
 
     import uninode.core;
 }
 
 
-
+/**
+ * Serialize object to UniNode
+ *
+ * Params:
+ * object = serialized object
+ */
 UniNode serializeToUniNode(T)(T object)
 {
     return vSerialize!(UniNodeSerializer, T)(object);
 }
 
 
-
+/**
+ * Deserialize object form UniNode
+ *
+ * Params:
+ * src = UniNode value
+ */
 T deserializeUniNode(T)(UniNode src)
 {
     return vDeserialize!(UniNodeSerializer, T, UniNode)(src);
 }
 
 
-
+/**
+ * Serializer for a UniNode representation.
+ */
 struct UniNodeSerializer
 {
     enum isSupportedValueType(T) = isUniNodeType!(T, UniNode) || is(T == UniNode);
@@ -51,80 +63,109 @@ struct UniNodeSerializer
 
     @disable this(this);
 
-
+    /**
+     * Construct serializer from UniNode
+     */
     this(UniNode data) @safe
     {
         _current = data;
     }
 
+    /**
+     *  serialization
+     */
 
-    // serialization
     UniNode getSerializedResult() @safe
     {
         return _current;
     }
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void beginWriteDictionary(TypeTraits)()
     {
         _stack ~= UniNode.emptyObject();
     }
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void endWriteDictionary(TypeTraits)()
     {
         _current = _stack[$-1];
         _stack.length--;
     }
 
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
+    void beginWriteDictionaryEntry(ElementTypeTraits)(string) {}
 
-    void beginWriteDictionaryEntry(ElementTypeTraits)(string name) {}
-
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void endWriteDictionaryEntry(ElementTypeTraits)(string name)
     {
         _stack[$-1][name] = _current;
     }
 
-
-    void beginWriteArray(TypeTraits)(size_t length)
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
+    void beginWriteArray(TypeTraits)(size_t)
     {
         _stack ~= UniNode.emptyArray();
     }
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void endWriteArray(TypeTraits)()
     {
         _current = _stack[$-1];
         _stack.length--;
     }
 
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
+    void beginWriteArrayEntry(ElementTypeTraits)(size_t) {}
 
-    void beginWriteArrayEntry(ElementTypeTraits)(size_t index) {}
-
-
-    void endWriteArrayEntry(ElementTypeTraits)(size_t index)
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
+    void endWriteArrayEntry(ElementTypeTraits)(size_t)
     {
         _stack[$-1] ~= _current;
     }
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void writeValue(TypeTraits, T)(T value) if (!is(T == UniNode))
     {
         _current = UniNode(value);
     }
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void writeValue(TypeTraits, T)(UniNode value) if (is(T == UniNode))
     {
         _current = value;
     }
 
+    /**
+     * deserialization
+     */
 
-    // deserialization
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void readDictionary(TypeTraits)(scope void delegate(string) @safe entry_callback) @safe
     {
-        auto old = _current;
+        const old = _current;
         foreach (ref string key, ref UniNode value; _current)
         {
             _current = value;
@@ -133,17 +174,23 @@ struct UniNodeSerializer
         _current = old;
     }
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void beginReadDictionaryEntry(ElementTypeTraits)(string) {}
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void endReadDictionaryEntry(ElementTypeTraits)(string) {}
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     void readArray(TypeTraits)(scope void delegate(size_t) @safe size_callback,
             scope void delegate() @safe entry_callback)
     {
-        auto old = _current;
+        const old = _current;
         size_callback(_current.length);
         foreach (ref UniNode ent; _current)
         {
@@ -153,13 +200,19 @@ struct UniNodeSerializer
         _current = old;
     }
 
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
+    void beginReadArrayEntry(ElementTypeTraits)(size_t) {}
 
-    void beginReadArrayEntry(ElementTypeTraits)(size_t index) {}
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
+    void endReadArrayEntry(ElementTypeTraits)(size_t) {}
 
-
-    void endReadArrayEntry(ElementTypeTraits)(size_t index) {}
-
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     T readValue(TypeTraits, T)() @safe
     {
         static if (is(T == UniNode))
@@ -180,7 +233,9 @@ struct UniNodeSerializer
             return _current.get!T();
     }
 
-
+    /**
+     * See_also: http://vibed.org/api/vibe.data.serialization/
+     */
     bool tryReadNull(TypeTraits)()
     {
         return _current.kind == UniNode.Kind.nil;

@@ -11,16 +11,18 @@ module uninode.core;
 
 private
 {
+    import std.array : appender;
+    import std.conv : to;
+    import std.format : fmt = format;
     import std.traits;
     import std.traits : isTraitsArray = isArray;
     import std.variant : maxSize;
-    import std.format : fmt = format;
-    import std.array : appender;
-    import std.conv : to;
 }
 
 
-
+/**
+ * UniNode implementation
+ */
 struct UniNodeImpl(This)
 {
 @safe:
@@ -28,7 +30,8 @@ struct UniNodeImpl(This)
     {
         alias Bytes = immutable(ubyte)[];
 
-        union U {
+        union U
+        {
             typeof(null) nil;
             bool boolean;
             ulong uinteger;
@@ -58,8 +61,9 @@ struct UniNodeImpl(This)
 
         Kind _kind;
 
-        ref inout(T) getDataAs(T)() inout @trusted {
-            static assert(T.sizeof <= _store.sizeof);
+        ref inout(T) getDataAs(T)() inout @trusted
+        {
+            static assert(T.sizeof <= _store.sizeof, "Size errro");
             return (cast(inout(T)[1])_store[0 .. T.sizeof])[0];
         }
 
@@ -113,7 +117,9 @@ struct UniNodeImpl(This)
         return _kind;
     }
 
-
+    /**
+     * Construct UniNode null value
+     */
     this(typeof(null)) inout nothrow
     {
         _kind = Kind.nil;
@@ -128,15 +134,17 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
-        auto node = This(null);
+        auto node = immutable(UniNode)(null);
         assert (node.isNull);
-        auto node2 = UniNode();
+        auto node2 = immutable(UniNode)();
         assert (node2.isNull);
     }
 
-
+    /**
+     * Construct UniNode from unsigned number value
+     */
     this(T)(T val) inout nothrow if (isUnsignedNumeric!T)
     {
         _kind = Kind.uinteger;
@@ -144,19 +152,21 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         import std.meta : AliasSeq;
         foreach (TT; AliasSeq!(ubyte, ushort, uint, ulong))
         {
             TT v = cast(TT)11U;
-            auto node = UniNode(v);
+            auto node = immutable(UniNode)(v);
             assert (node.kind == UniNode.Kind.uinteger);
             assert (node.get!TT == cast(TT)11U);
         }
     }
 
-
+    /**
+     * Construct UniNode from signed number value
+     */
     this(T)(T val) inout nothrow if (isSignedNumeric!T)
     {
         _kind = Kind.integer;
@@ -164,7 +174,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         import std.meta : AliasSeq;
         foreach (TT; AliasSeq!(byte, short, int, long))
@@ -176,7 +186,9 @@ struct UniNodeImpl(This)
         }
     }
 
-
+    /**
+     * Construct UniNode from boolean value
+     */
     this(T)(T val) inout nothrow if (isBoolean!T)
     {
         _kind = Kind.boolean;
@@ -184,7 +196,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto node = UniNode(true);
         assert (node.kind == UniNode.Kind.boolean);
@@ -194,7 +206,9 @@ struct UniNodeImpl(This)
         assert (nodei.kind == UniNode.Kind.integer);
     }
 
-
+    /**
+     * Construct UniNode from floating value
+     */
     this(T)(T val) inout nothrow if (isFloatingPoint!T)
     {
         _kind = Kind.floating;
@@ -202,7 +216,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         import std.meta : AliasSeq;
         foreach (TT; AliasSeq!(float, double))
@@ -214,15 +228,17 @@ struct UniNodeImpl(This)
         }
     }
 
-
-    this(T)(T val) inout nothrow if(isSomeString!T)
+    /**
+     * Construct UniNode from string
+     */
+    this(string val) inout nothrow
     {
         _kind = Kind.text;
         (cast(string)_string) = val;
     }
 
 
-    unittest
+    @safe unittest
     {
         string str = "hello";
         auto node = UniNode(str);
@@ -230,7 +246,9 @@ struct UniNodeImpl(This)
         assert (node.get!(string) == "hello");
     }
 
-
+    /**
+     * Construct UniNode from byte array
+     */
     this(T)(T val) inout nothrow if (isRawData!T)
     {
         _kind = Kind.raw;
@@ -241,7 +259,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         ubyte[] dynArr = [1, 2, 3];
         auto node = UniNode(dynArr);
@@ -259,15 +277,19 @@ struct UniNodeImpl(This)
         assert (node.get!(ubyte[]) == [1, 2, 3]);
     }
 
-
+    /**
+     * Construct array UniNode
+     */
     this(This[] val) nothrow
     {
         _kind = Kind.array;
         _array = val;
     }
 
-
-    static This emptyArray() @property nothrow
+    /**
+     * Construct empty UniNode array
+     */
+    static This emptyArray() nothrow
     {
         return This(cast(This[])null);
     }
@@ -281,22 +303,26 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto node = UniNode.emptyArray;
         assert(node.isArray);
         assert(node.length == 0);
     }
 
-
+    /**
+     * Construct object UnoNode
+     */
     this(This[string] val) nothrow
     {
         _kind = Kind.object;
         _object = val;
     }
 
-
-    static This emptyObject() @property nothrow
+    /**
+     * Construct empty UniNode object
+     */
+    static This emptyObject() nothrow
     {
         return This(cast(This[string])null);
     }
@@ -310,7 +336,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto node = UniNode.emptyObject;
         assert(node.isObject);
@@ -331,14 +357,16 @@ struct UniNodeImpl(This)
                 return _object.length;
             default:
                 enforceUniNode(false, "Expected " ~ This.stringof ~ " not length");
-                assert(false);
+                assert(false, "Nothing");
         }
     }
 
 
     alias opDollar = length;
 
-
+    /**
+     * Return value from UnoNode
+     */
     inout(T) get(T)() inout @trusted if (isUniNodeType!(T, This))
     {
         static if (isSignedNumeric!T)
@@ -451,22 +479,84 @@ struct UniNodeImpl(This)
         return 0;
     }
 
-
+    /**
+     * Iteration by UnoNode array or object
+     */
     int opApply(scope int delegate(ref ulong idx, ref This node) dg)
     {
         return _opApply!(int delegate(ref ulong idx, ref This node))(dg);
     }
 
-
+    /**
+     * Iteration by UnoNode object
+     */
     int opApply(scope int delegate(ref string idx, ref This node) dg)
     {
         return _opApply!(int delegate(ref string idx, ref This node))(dg);
     }
 
-
+    /**
+     * Iteration by UnoNode array
+     */
     int opApply(scope int delegate(ref This node) dg)
     {
         return _opApply!(int delegate(ref This node))(dg);
+    }
+
+
+    ulong toHash()
+    {
+        final switch (_kind) with (Kind)
+        {
+            case nil:
+                return 0;
+            case boolean:
+                return _bool.hashOf();
+            case uinteger:
+                return _uint.hashOf();
+            case integer:
+                return _int.hashOf();
+            case floating:
+                return _float.hashOf();
+            case text:
+                return _string.hashOf();
+            case raw:
+                return _raw.hashOf();
+            case array:
+                return _array.hashOf();
+            case object:
+                return _object.hashOf();
+        }
+    }
+
+
+    @safe unittest
+    {
+        UniNode node;
+        assert(node.toHash() == 0);
+
+        node = UniNode(true);
+        assert(node.toHash() == 1);
+        node = UniNode(false);
+        assert(node.toHash() == 0);
+        node = UniNode(22u);
+        assert(node.toHash() == 22);
+        node = UniNode(-22);
+        assert(node.toHash() == -22);
+        node = UniNode(22.22);
+        assert(node.toHash() == 1552493386);
+        node = UniNode("1");
+        assert(node.toHash() == 2484513939);
+        ubyte[] data = [1, 2, 3];
+        node = UniNode(data);
+        assert(node.toHash() == 2161234436);
+        node = UniNode([UniNode(1), UniNode(2)]);
+        assert(node.toHash() == 9774061950961268414U);
+        node = UniNode(["1": UniNode(1), "2": UniNode(2)]);
+        assert(node.toHash() == 4159018407);
+
+        auto node2 = UniNode(["2": UniNode(2), "1": UniNode(1)]);
+        assert(node.toHash() == node2.toHash());
     }
 
 
@@ -505,7 +595,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto n1 = UniNode(1);
         auto n2 = UniNode("1");
@@ -521,7 +611,9 @@ struct UniNodeImpl(This)
         assert(UniNode(["one": n1, "two": n2]) == UniNode(["one": n1, "two": n2]));
     }
 
-
+    /**
+     * Implement operator in for object
+     */
     inout(This)* opBinaryRight(string op)(string key) inout if (op == "in")
     {
         enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
@@ -529,7 +621,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto node = UniNode(1);
         auto mnode = UniNode(["one": node, "two": node]);
@@ -538,11 +630,11 @@ struct UniNodeImpl(This)
     }
 
 
-    string toString()
+    string toString() const
     {
         auto buff = appender!string;
 
-        void fun(ref UniNodeImpl!This node) @safe
+        void fun(UniNodeImpl!This node) @safe const
         {
             switch (node.kind)
             {
@@ -570,7 +662,7 @@ struct UniNodeImpl(This)
                 case Kind.object:
                 {
                     buff.put("{");
-                    size_t len = node.length;
+                    immutable len = node.length;
                     size_t count;
                     foreach (ref string k, ref This v; node)
                     {
@@ -586,7 +678,7 @@ struct UniNodeImpl(This)
                 case Kind.array:
                 {
                     buff.put("[");
-                    size_t len = node.length;
+                    immutable len = node.length;
                     size_t count;
                     foreach (size_t i, ref This v; node)
                     {
@@ -609,7 +701,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto obj = UniNode.emptyObject;
 
@@ -637,7 +729,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto node = UniNode();
         assert (node.isNull);
@@ -649,7 +741,9 @@ struct UniNodeImpl(This)
         assert (mnode.isObject);
     }
 
-
+    /**
+     * Implement index operator by UniNode array
+     */
     ref inout(This) opIndex(size_t idx) inout
     {
         enforceUniNode(_kind == Kind.array, "Expected " ~ This.stringof ~ " array");
@@ -657,7 +751,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto arr = UniNode.emptyArray;
         foreach(i; 1..10)
@@ -665,7 +759,9 @@ struct UniNodeImpl(This)
         assert(arr[1] == UniNode(2));
     }
 
-
+    /**
+     * Implement index operator by UniNode object
+     */
     ref inout(This) opIndex(string key) inout
     {
         enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
@@ -673,7 +769,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         UniNode[string] obj;
         foreach(i; 1..10)
@@ -683,13 +779,17 @@ struct UniNodeImpl(This)
         assert(node["2"] == UniNode(4));
     }
 
-
+    /**
+     * Implement index assign operator by UniNode object
+     */
     ref This opIndexAssign(This val, string key)
     {
         return opIndexAssign(val, key);
     }
 
-
+    /**
+     * Implement index assign operator by UniNode object
+     */
     ref This opIndexAssign(ref This val, string key)
     {
         enforceUniNode(_kind == Kind.object, "Expected " ~ This.stringof ~ " object");
@@ -697,7 +797,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         UniNode node = UniNode.emptyObject;
         UniNode[string] obj;
@@ -707,13 +807,17 @@ struct UniNodeImpl(This)
         assert(node["2"] == UniNode(4));
     }
 
-
+    /**
+     * Implement operator ~= by UniNode array
+     */
     void opOpAssign(string op)(This[] elem) if (op == "~")
     {
         opOpAssign!op(UniNode(elem));
     }
 
-
+    /**
+     * Implement operator ~= by UniNode array
+     */
     void opOpAssign(string op)(This elem) if (op == "~")
     {
         enforceUniNode(_kind == Kind.array, "Expected " ~ This.stringof ~ " array");
@@ -721,7 +825,7 @@ struct UniNodeImpl(This)
     }
 
 
-    unittest
+    @safe unittest
     {
         auto node = UniNode(1);
         auto anode = UniNode([node, node]);
@@ -856,17 +960,14 @@ template isUniNodeObject(T, This)
 
 
 auto assumeSafe(F)(F fun) @safe
-    if (isFunctionPointer!F || isDelegate!F)
+if (isFunctionPointer!F || isDelegate!F)
 {
     static if (hasFunctionAttributes!(F, "@safe"))
         return fun;
     else
-    {
-        enum attrs = (functionAttributes!F & ~FunctionAttribute.system)
-            | FunctionAttribute.safe;
-        return () @trusted {
-            return cast(SetFunctionAttributes!(F, functionLinkage!F, attrs)) fun;
-        } ();
-    }
+        return (ParameterTypeTuple!F args) @trusted
+        {
+            return fun(args);
+        };
 }
 
