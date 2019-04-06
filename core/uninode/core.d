@@ -504,62 +504,6 @@ struct UniNodeImpl(This)
     }
 
 
-    ulong toHash()
-    {
-        final switch (_kind) with (Kind)
-        {
-            case nil:
-                return 0;
-            case boolean:
-                return _bool.hashOf();
-            case uinteger:
-                return _uint.hashOf();
-            case integer:
-                return _int.hashOf();
-            case floating:
-                return _float.hashOf();
-            case text:
-                return _string.hashOf();
-            case raw:
-                return _raw.hashOf();
-            case array:
-                return _array.hashOf();
-            case object:
-                return _object.hashOf();
-        }
-    }
-
-
-    @safe unittest
-    {
-        UniNode node;
-        assert(node.toHash() == 0);
-
-        node = UniNode(true);
-        assert(node.toHash() == 1);
-        node = UniNode(false);
-        assert(node.toHash() == 0);
-        node = UniNode(22u);
-        assert(node.toHash() == 22);
-        node = UniNode(-22);
-        assert(node.toHash() == -22);
-        node = UniNode(22.22);
-        assert(node.toHash() == 1552493386);
-        node = UniNode("1");
-        assert(node.toHash() == 2484513939);
-        ubyte[] data = [1, 2, 3];
-        node = UniNode(data);
-        assert(node.toHash() == 2161234436);
-        node = UniNode([UniNode(1), UniNode(2)]);
-        assert(node.toHash() == 9774061950961268414U);
-        node = UniNode(["1": UniNode(1), "2": UniNode(2)]);
-        assert(node.toHash() == 4159018407);
-
-        auto node2 = UniNode(["2": UniNode(2), "1": UniNode(1)]);
-        assert(node.toHash() == node2.toHash());
-    }
-
-
     bool opEquals(const This other) const
     {
         return opEquals(other);
@@ -654,7 +598,7 @@ struct UniNodeImpl(This)
                     buff.put("float("~node.get!double.to!string~")");
                     break;
                 case Kind.text:
-                    buff.put("text("~node.get!string.to!string~")");
+                    buff.put("text("~node.get!string~")");
                     break;
                 case Kind.raw:
                     buff.put("raw("~node.get!(ubyte[]).to!string~")");
