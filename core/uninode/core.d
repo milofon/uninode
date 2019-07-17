@@ -504,13 +504,13 @@ struct UniNodeImpl(This)
     }
 
 
-    bool opEquals(const This other) const
+    bool opEquals(const UniNodeImpl!(This) other) const
     {
         return opEquals(other);
     }
 
 
-    bool opEquals(ref const This other) const @trusted
+    bool opEquals(ref const UniNodeImpl!(This) other) const @trusted
     {
         if (_kind != other.kind)
             return false;
