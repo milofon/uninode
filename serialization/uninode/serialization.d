@@ -151,7 +151,7 @@ struct UniNodeSerializer
     /**
      * See_also: http://vibed.org/api/vibe.data.serialization/
      */
-    void writeValue(TypeTraits, T)(UniNode value) if (is(T == UniNode))
+    void writeValue(TypeTraits, T)(T value) if (is(T == UniNode))
     {
         _current = value;
     }
@@ -241,4 +241,3 @@ struct UniNodeSerializer
         return _current.kind == UniNode.Kind.nil;
     }
 }
-
