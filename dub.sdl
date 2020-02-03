@@ -1,29 +1,20 @@
 name "uninode"
 description "Universal node with application"
 authors "Maksim Galanin"
-copyright "Copyright (c) 2015-2018, Milofon Project. All rights reserved."
+copyright "Copyright (c) 2015-2020, Milofon Project. All rights reserved."
 license "BSD 3-clause"
 
 targetPath "out"
 
-dependency ":core" version="*"
-dependency ":serialization" version="*"
-
-subPackage "core"
-subPackage "serialization"
-
 
 configuration "library" {
   targetType "library"
-  targetName "uninode"
 }
 
 
-configuration "test" {
-  dependency "d-unit" version="~>0.8.1"
-  targetType "executable"
-
-  versions "UnitTestVersion"
-
-  sourcePaths "test"
+configuration "unittest" {
+  dependency "silly" version="~>1.0.1"
+  sourcePaths "./tests"
+  importPaths "./tests"
 }
+

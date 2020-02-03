@@ -7,6 +7,7 @@
 
 module uninode.serialization_test;
 
+/+
 private
 {
     import dunit;
@@ -70,4 +71,5 @@ class TestSerialization
         assertEquals(orig, face);
     }
 }
++/
 
