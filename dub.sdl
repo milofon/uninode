@@ -4,17 +4,20 @@ authors "Maksim Galanin"
 copyright "Copyright (c) 2015-2020, Milofon Project. All rights reserved."
 license "BSD 3-clause"
 
+dflags "-preview=dip25" "-preview=dip1000"
+
+dependency "optional" version="~>0.19.1"
+
 targetPath "out"
 
-
 configuration "library" {
-  targetType "library"
+	targetType "library"
 }
 
-
 configuration "unittest" {
-  dependency "silly" version="~>1.0.1"
-  sourcePaths "./tests"
-  importPaths "./tests"
+	dependency "silly" version="~>1.0.1"
+	targetType "library"
+	sourcePaths "./tests"
+	importPaths "./tests"
 }
 
