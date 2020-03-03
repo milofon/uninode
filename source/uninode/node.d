@@ -20,6 +20,8 @@ private
     import std.conv : to, ConvOverflowException;
     import std.array : appender, join;
     import std.traits;
+
+    import optional : Optional;
 }
 
 
@@ -332,6 +334,30 @@ struct UniNodeImpl(Node)
     }
 
     /**
+     * Convert UniNode to optional primitive type
+     */
+    Optional!(const(T)) opt(T)() const pure @safe
+    {
+        alias RT = Optional!(const(T));
+        try
+            return RT(get!T);
+        catch (UniNodeException e)
+            return RT.init;
+    }
+
+    /**
+     * Convert UniNode to optional primitive type
+     */
+    Optional!(T) opt(T)() pure @safe
+    {
+        alias RT = Optional!(T);
+        try
+            return RT(get!T);
+        catch (UniNodeException e)
+            return RT.init;
+    }
+
+    /**
      * Implement index operator by Node array
      */
     inout(Node) opIndex(size_t idx) inout @safe
@@ -410,6 +436,23 @@ struct UniNodeImpl(Node)
     }
 
     /**
+     * Inserting if not present
+     */
+    Node require(T)(string key, auto ref T val)
+        if (isUniNodeInnerType!T || is(Unqual!T == Node))
+    {
+        if (auto ret = key in _val!(Node[string]))
+            return *ret;
+        else
+        {
+            static if (is(Unqual!T == Node))
+                return _val!(Node[string])[key] = val;
+            else
+                return _val!(Node[string])[key] = Node(val);
+        }
+    }
+
+    /**
      * Implement operator in for mapping
      */
     inout(Node)* opBinaryRight(string op)(string key) inout @safe
@@ -425,7 +468,7 @@ struct UniNodeImpl(Node)
      */
     int opApply(scope int delegate(ref string, ref const(Node)) dg) const
     {
-        return _opApply(dg);
+        return _opApply!(const(Node))(dg);
     }
 
     /**
@@ -433,7 +476,7 @@ struct UniNodeImpl(Node)
      */
     int opApply(scope int delegate(ref string, ref Node) dg)
     {
-        return _opApply(dg);
+        return _opApply!(Node)(dg);
     }
 
     /**
@@ -441,7 +484,7 @@ struct UniNodeImpl(Node)
      */
     int opApply(scope int delegate(ref size_t, ref const(Node)) dg) const
     {
-        return _opApply(dg);
+        return _opApply!(const(Node))(dg);
     }
 
     /**
@@ -449,7 +492,7 @@ struct UniNodeImpl(Node)
      */
     int opApply(scope int delegate(ref size_t, ref Node) dg)
     {
-        return _opApply(dg);
+        return _opApply!(Node)(dg);
     }
 
     /**
@@ -457,7 +500,7 @@ struct UniNodeImpl(Node)
      */
     int opApply(scope int delegate(ref const(Node)) dg) const
     {
-        return _opApply(dg);
+        return _opApply!(const(Node))(dg);
     }
 
     /**
@@ -465,7 +508,7 @@ struct UniNodeImpl(Node)
      */
     int opApply(scope int delegate(ref Node) dg)
     {
-        return _opApply(dg);
+        return _opApply!(Node)(dg);
     }
 
     /**
@@ -581,23 +624,15 @@ private:
             fmt!("Trying to convert %s but have %s.")(T.stringof, _tag), file, line);
     }
 
-    int _opApply(F)(scope F dg) const
+    int _opApply(N, F)(scope F dg) inout @trusted
     {
         alias Params = Parameters!F;
-
-        static if (hasFunctionAttributes!(F, "@safe"))
-            enum fun = dg;
-        else
-        {
-            int fun(ParameterTypeTuple!F args) @trusted const
-            {
-                return dg(args);
-            }
-        }
+        auto fun = assumeSafe(dg);
 
         static if (Params.length == 1 && is(Unqual!(Params[0]) : Node))
         {
-            foreach (ref const(Node) node; getSequence())
+            N[] nodes = cast(N[])getSequence();
+            foreach (ref N node; nodes)
                 if (auto ret = fun(node))
                     return ret;
         }
@@ -605,51 +640,15 @@ private:
         {
             static if (isSomeString!(Params[0]))
             {
-                foreach (string key, ref const(Node) node; getMapping)
+                N[string] nodes = cast(N[string])getMapping;
+                foreach (string key, ref N node; nodes)
                     if (auto ret = fun(key, node))
                         return ret;
             }
             else
             {
-                foreach (size_t key, ref const(Node) node; getSequence)
-                    if (auto ret = fun(key, node))
-                        return ret;
-            }
-        }
-        return 0;
-    }
-
-    int _opApply(F)(scope F dg)
-    {
-        alias Params = Parameters!F;
-
-        static if (hasFunctionAttributes!(F, "@safe"))
-            enum fun = dg;
-        else
-        {
-            int fun(ParameterTypeTuple!F args) @trusted 
-            {
-                return dg(args);
-            }
-        }
-
-        static if (Params.length == 1 && is(Unqual!(Params[0]) : Node))
-        {
-            foreach (ref Node node; getSequence())
-                if (auto ret = fun(node))
-                    return ret;
-        }
-        else static if (Params.length == 2 && is(Unqual!(Params[1]) : Node))
-        {
-            static if (isSomeString!(Params[0]))
-            {
-                foreach (string key, ref Node node; getMapping)
-                    if (auto ret = fun(key, node))
-                        return ret;
-            }
-            else
-            {
-                foreach (size_t key, ref Node node; getSequence)
+                N[] nodes = cast(N[])getSequence();
+                foreach (size_t key, ref N node; nodes)
                     if (auto ret = fun(key, node))
                         return ret;
             }
@@ -1116,5 +1115,17 @@ template GetDistance(Node, Org, Trg)
         enum GetDistance = 0;
     else
         enum GetDistance = ubyte.max;
+}
+
+
+auto assumeSafe(F)(F fun) 
+    if (isFunctionPointer!F || isDelegate!F)
+{
+    static if (functionAttributes!F & FunctionAttribute.safe)
+        return fun;
+    else
+        return (ParameterTypeTuple!F args) @trusted { 
+            return fun(args); 
+        };
 }
 

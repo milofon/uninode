@@ -615,3 +615,44 @@ version (unittest)
     assert (mapp["one"].get!int == 1);
 }
 
+
+@("Should work require")
+@safe unittest
+{
+    UniNode mapp = UniNode.emptyMapping;
+    auto req = mapp.require("one", 1);
+    assert (req == UniNode(1));
+    req = mapp.require("one", 11);
+    assert (req == UniNode(1));
+}
+
+
+@("Should work opApply modify")
+@safe unittest
+{
+    UniNode mapp = UniNode(["one": UniNode(1), "two": UniNode(2)]);
+    foreach (string k, ref UniNode n; mapp)
+        n = UniNode(k);
+    assert (mapp["one"] == UniNode("one"));
+
+    UniNode seq = UniNode([UniNode(1), UniNode(2)]);
+    foreach (size_t idx, ref UniNode n; seq)
+        n = UniNode(idx * 4); 
+    assert (seq[1] == UniNode(4));
+}
+
+
+@("Should work opt method")
+@system unittest
+{
+    immutable node = UniNode(1);
+    assert (!node.opt!int.empty);
+    assert (node.opt!string.empty);
+    assert (node.opt!(UniNode[]).empty);
+    assert (node.opt!(UniNode[string]).empty);
+
+    UniNode anode = UniNode([UniNode(1), UniNode(2)]);
+    auto v = anode.opt!(UniNode[]);
+    assert (!v.empty);
+}
+
