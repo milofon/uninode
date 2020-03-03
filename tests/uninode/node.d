@@ -11,13 +11,13 @@ private
 {
     import std.algorithm.iteration : map;
     import std.traits : isArray, isAssociativeArray;
+    import std.exception : assertThrown, collectException;
     import std.meta : AliasSeq, allSatisfy;
     import std.array : array;
     import std.range : iota;
     import std.conv : text;
 
     import uninode.node;
-    import std.exception : assertThrown, collectException;
 }
 
 
@@ -652,7 +652,13 @@ version (unittest)
     assert (node.opt!(UniNode[string]).empty);
 
     UniNode anode = UniNode([UniNode(1), UniNode(2)]);
-    auto v = anode.opt!(UniNode[]);
-    assert (!v.empty);
+    assert (!anode.opt!(UniNode[]).empty);
+    assert (!anode.optSequence.empty);
+    assert (node.optSequence.empty);
+
+    UniNode mnode = UniNode(["one": UniNode(1), "two": UniNode(2)]);
+    assert (!mnode.opt!(UniNode[string]).empty);
+    assert (!mnode.optMapping.empty);
+    assert (node.optMapping.empty);
 }
 

@@ -358,6 +358,54 @@ struct UniNodeImpl(Node)
     }
 
     /**
+     * Convert UniNode to optional sequence
+     */
+    Optional!(const(Node[])) optSequence() const pure @safe
+    {
+        alias RT = Optional!(const(Node[]));
+        try
+            return RT(getSequence());
+        catch (UniNodeException e)
+            return RT.init;
+    }
+
+    /**
+     * Convert UniNode to optional sequence
+     */
+    Optional!(Node[]) optSequence() pure @safe
+    {
+        alias RT = Optional!(Node[]);
+        try
+            return RT(getSequence());
+        catch (UniNodeException e)
+            return RT.init;
+    }
+
+    /**
+     * Convert UniNode to optional mapping
+     */
+    Optional!(const(Node[string])) optMapping() const pure @safe
+    {
+        alias RT = Optional!(const(Node[string]));
+        try
+            return RT(getMapping());
+        catch (UniNodeException e)
+            return RT.init;
+    }
+
+    /**
+     * Convert UniNode to optional mapping
+     */
+    Optional!(Node[string]) optMapping() pure @safe
+    {
+        alias RT = Optional!(Node[string]);
+        try
+            return RT(getMapping());
+        catch (UniNodeException e)
+            return RT.init;
+    }
+
+    /**
      * Implement index operator by Node array
      */
     inout(Node) opIndex(size_t idx) inout @safe
@@ -549,7 +597,7 @@ struct UniNodeImpl(Node)
     /**
      * Compares two `UniNode`s for equality.
      */
-    bool opEquals()(auto ref const(UniNode) rhs) const @safe
+    bool opEquals()(auto ref const(Node) rhs) const @safe
     {
         return this.match!((value) {
                 return rhs.match!((rhsValue) {
@@ -712,7 +760,7 @@ struct UniNode
     /**
      * Compares two `UniNode`s for equality.
      */
-    bool opEquals(const(UniNode) rhs) inout pure @safe
+    bool opEquals(const(UniNode) rhs) const pure @safe
     {
         return node.opEquals(rhs);
     }
@@ -827,6 +875,37 @@ template isRawData(T)
 }
 
 
+/**
+ * Checking for array
+ */
+template isUniNodeArray(T, N)
+{
+    enum isUniNodeArray = isArray!T && is(Unqual!(ForeachType!T) : Unqual!N);
+}
+
+@("Checking for array")
+@safe unittest
+{
+    assert (isUniNodeArray!(UniNode[], UniNode));
+}
+
+
+/**
+ * Checking for object
+ */
+template isUniNodeMapping(T, N)
+{
+    enum isUniNodeMapping = isAssociativeArray!T
+        && is(Unqual!(ForeachType!T) : Unqual!N) && is(KeyType!T == string);
+}
+
+@("Checking for object")
+@safe unittest
+{
+    assert (isUniNodeMapping!(UniNode[string], UniNode));
+}
+
+
 private:
 
 
@@ -868,37 +947,6 @@ template isUnsignedNumeric(T)
 {
     static foreach(T; AliasSeq!(ubyte, uint, ushort, ulong))
         assert(isUnsignedNumeric!T);
-}
-
-
-/**
- * Checking for array
- */
-template isUniNodeArray(T, N)
-{
-    enum isUniNodeArray = isArray!T && is(Unqual!(ForeachType!T) : Unqual!N);
-}
-
-@("Checking for array")
-@safe unittest
-{
-    assert (isUniNodeArray!(UniNode[], UniNode));
-}
-
-
-/**
- * Checking for object
- */
-template isUniNodeMapping(T, N)
-{
-    enum isUniNodeMapping = isAssociativeArray!T
-        && is(Unqual!(ForeachType!T) : Unqual!N) && is(KeyType!T == string);
-}
-
-@("Checking for object")
-@safe unittest
-{
-    assert (isUniNodeMapping!(UniNode[string], UniNode));
 }
 
 
