@@ -220,19 +220,19 @@ struct UniTree
     /**
      * Getting node or throw exception
      */
-    inout(T) getOrThrown(T, E = UniNodeException)(lazy string msg, 
+    inout(T) getOrThrown(T, E = UniNodeException)(lazy string msg,
             size_t line = __LINE__, string file = __FILE__) inout pure @safe
     {
         try
             return node.get!T;
         catch (Exception e)
-            throw new E(msg, file, line); 
+            throw new E(msg, file, line);
     }
 
     /**
      * Getting node or throw exception with path
      */
-    inout(T) getOrThrown(T, E = UniNodeException)(string path, lazy string msg, 
+    inout(T) getOrThrown(T, E = UniNodeException)(string path, lazy string msg,
             size_t line = __LINE__, string file = __FILE__) inout pure @safe
     {
         auto nodePtr = findNode(path);
@@ -258,7 +258,7 @@ struct UniTree
      *
      * path = The path to the desired site
      */
-    inout(UniTree)* opBinaryRight(string op)(string path) inout 
+    inout(UniTree)* opBinaryRight(string op)(string path) inout
         if (op == "in")
     {
         return findNode(path);
@@ -274,7 +274,7 @@ struct UniTree
      *
      * src = Source properties
      */
-    UniTree opBinary(string op)(auto ref UniTree src) 
+    UniTree opBinary(string op)(auto ref UniTree src)
         if ("~" == op)
     {
         if (src.canNil)

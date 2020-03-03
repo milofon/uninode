@@ -228,10 +228,10 @@ version (unittest)
     const sc = deserializeUniNode!(S!(int, string))(ss);
     assert (sc == s);
 
-    static struct T 
-    { 
+    static struct T
+    {
         @asArray
-        S!(int, string) g; 
+        S!(int, string) g;
     }
 
     const t = T(s);
@@ -241,15 +241,15 @@ version (unittest)
 
 
 @("Testing the various UDAs")
-@safe unittest 
-{ 
-	enum E { hello, world }
-	static struct S 
+@safe unittest
+{
+    enum E { hello, world }
+    static struct S
     {
-		@byName E e;
-		@ignore int i;
-		@optional float f;
-	}
+        @byName E e;
+        @ignore int i;
+        @optional float f;
+    }
 
     auto s = S(E.world, 42, 1.0f);
     assert(serializeToUniNode(s) == UniNode(["e": UniNode("world"), "f": UniNode(1)]));
@@ -258,9 +258,9 @@ version (unittest)
 
 @("Custom serialization support")
 @safe unittest
-{ 
-	import std.datetime : TimeOfDay, Date, DateTime, SysTime, UTC;
-	auto t = TimeOfDay(6, 31, 23);
+{
+    import std.datetime : TimeOfDay, Date, DateTime, SysTime, UTC;
+    auto t = TimeOfDay(6, 31, 23);
     assert(serializeToUniNode(t) == UniNode("06:31:23"));
     auto d = Date(1964, 1, 23);
     assert(serializeToUniNode(d) == UniNode("1964-01-23"));
@@ -274,13 +274,13 @@ version (unittest)
 @("Testing corner case: member function returning by ref")
 @safe unittest
 {
-	static struct S
-	{
-		int i;
-		ref int foo() { return i; }
-	}
+    static struct S
+    {
+        int i;
+        ref int foo() { return i; }
+    }
 
-	auto s = S(1);
+    auto s = S(1);
     assert(serializeToUniNode(s).deserializeUniNode!S == s);
 }
 
@@ -288,31 +288,31 @@ version (unittest)
 @("Testing corner case: Variadic template constructors and methods")
 @safe unittest
 {
-	static struct S
-	{
-		int i;
-		this(Args...)(Args args) {}
-		int foo(Args...)(Args args) { return i; }
-		ref int bar(Args...)(Args args) { return i; }
-	}
+    static struct S
+    {
+        int i;
+        this(Args...)(Args args) {}
+        int foo(Args...)(Args) { return i; }
+        ref int bar(Args...)(Args) { return i; }
+    }
 
-	const s = S(1);
-	assert(s.serializeToUniNode.deserializeUniNode!S == s);
+    const s = S(1);
+    assert(s.serializeToUniNode.deserializeUniNode!S == s);
 }
 
 
 @("Make sure serializing through properties still works")
 @safe unittest
 {
-	static struct S
-	{
-		@safe:
-		public int i;
-		private int privateJ;
+    static struct S
+    {
+        @safe:
+            public int i;
+        private int privateJ;
 
-		@property int j() inout @safe { return privateJ; }
-		@property void j(int j) @safe { privateJ = j; }
-	}
+        @property int j() inout @safe { return privateJ; }
+        @property void j(int j) @safe { privateJ = j; }
+    }
 
     auto s = S(1, 2);
     assert(s.serializeToUniNode().deserializeUniNode!S() == s);
@@ -360,7 +360,7 @@ version (unittest)
 
     auto t = Test(4, 5, 6);
     const tNode = serializeToUniNode(t);
-    assert (tNode == UniNode(["a": UniNode(4), 
+    assert (tNode == UniNode(["a": UniNode(4),
                 "b": UniNode(5), "c": UniNode(6)]));
     assert (deserializeUniNode!Test(tNode) == t);
 }
@@ -407,13 +407,11 @@ version (unittest)
         Point top;
     }
 
-    static 
-
     auto st = Surface([
             Pixel(Point(1.1, 2.3), Color.red),
             Pixel(Point(2.3, 3.3), Color.green),
             Pixel(Point(3.3, 1.1), Color.blue),
-        ], 
+        ],
         Gradient(Color.red, Color.blue),
         Gradient(Color.green, Color.blue),
         Center(4.1, 3.4));
@@ -575,38 +573,38 @@ version (unittest)
 
 
 @("single-element tuples")
-@safe unittest 
+@safe unittest
 {
-	static struct F { int field; }
+    static struct F { int field; }
 
-	{
-		static struct S { typeof(F.init.tupleof) fields; }
-		auto b = serializeToUniNode(S(42));
+    {
+        static struct S { typeof(F.init.tupleof) fields; }
+        auto b = serializeToUniNode(S(42));
         auto a = deserializeUniNode!S(b);
         assert(a.fields[0] == 42);
-	}
+    }
 
-	{
+    {
         static struct T { @asArray typeof(F.init.tupleof) fields; }
         auto b = serializeToUniNode(T(42));
         auto a = deserializeUniNode!(T)(b);
         assert(a.fields[0] == 42);
-	}
+    }
 }
 
 
 @("@system property getters/setters does not compile")
 @system unittest {
-	static class A 
+    static class A
     {
-		@property @name("foo") 
+        @property @name("foo")
         {
-			string fooString() const { return a; }
-			void fooString(string a) { this.a = a; }
-		}
+            string fooString() const { return a; }
+            void fooString(string a) { this.a = a; }
+        }
 
         private string a;
-	}
+    }
 
     auto a1 = new A;
     a1.a = "hello";
@@ -618,10 +616,10 @@ version (unittest)
 
 
 @("Should serialization builtin")
-@system unittest 
+@system unittest
 {
-	static struct Bar { Bar[] foos; int i; }
-	Bar b1 = {[{null, 2}], 1};
+    static struct Bar { Bar[] foos; int i; }
+    Bar b1 = {[{null, 2}], 1};
     auto s = serializeToUniNode(b1);
     const b = deserializeUniNode!(Bar)(s);
     assert (b.i == 1);
@@ -638,5 +636,6 @@ version (unittest)
     assert (node == sNode);
 
     const dNode = deserializeUniNode!UniNode(node);
+    assert (dNode == node);
 }
 

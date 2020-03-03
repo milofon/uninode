@@ -84,7 +84,7 @@ version (unittest)
 @safe unittest
 {
     const start = iota(5).map!(i => UniNode(i)).array;
-    
+
     const seq = UniNode(start);
     static assert (is(typeof(seq.getSequence()) == const(UniNode[])));
     assert (seq.canSequence);
@@ -133,7 +133,7 @@ version (unittest)
     static assert (is(typeof(cMapp.getMapping()) == const(UniNode[string])));
     assert (cMapp.canMapping);
     assert (cMapp["one"].get!int == 1);
-    static assert (!__traits(compiles, () { cMapp["four"] = 4; })); 
+    static assert (!__traits(compiles, () { cMapp["four"] = 4; }));
 
     auto mutMapp = UniNode(mapp);
     static assert (is(typeof(mutMapp.getMapping()) == UniNode[string]));
@@ -577,7 +577,7 @@ version (unittest)
             "bin": binNode,
             "nil": nilNode,
             "arr": arrNode]);
-    
+
     assert (objNode.text == "{i:int(2147483647), bool:bool(true), "
             ~ "text:text(node), arr:[int(2147483647), float(nan), text(node), "
             ~ "nil], nil:nil, ui:uint(4294967295), bin:raw([1, 2, 3]), f:float(nan)}");
@@ -637,7 +637,7 @@ version (unittest)
 
     UniNode seq = UniNode([UniNode(1), UniNode(2)]);
     foreach (size_t idx, ref UniNode n; seq)
-        n = UniNode(idx * 4); 
+        n = UniNode(idx * 4);
     assert (seq[1] == UniNode(4));
 }
 

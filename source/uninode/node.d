@@ -1105,7 +1105,7 @@ template matchImpl(handlers...)
                             static if (isUniNodeArray!(PT, Node) || isUniNodeMapping!(PT, Node))
                                 mixin("handler",
                                     toCtString!(matches[tid].hid))(node._val!T);
-                            else 
+                            else
                                 mixin("handler",
                                     toCtString!(matches[tid].hid))(node.get!(PT));
                             return 0;
@@ -1166,14 +1166,14 @@ template GetDistance(Node, Org, Trg)
 }
 
 
-auto assumeSafe(F)(F fun) 
+auto assumeSafe(F)(F fun)
     if (isFunctionPointer!F || isDelegate!F)
 {
     static if (functionAttributes!F & FunctionAttribute.safe)
         return fun;
     else
-        return (ParameterTypeTuple!F args) @trusted { 
-            return fun(args); 
+        return (ParameterTypeTuple!F args) @trusted {
+            return fun(args);
         };
 }
 
