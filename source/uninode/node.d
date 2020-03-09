@@ -15,7 +15,7 @@ private
     import std.meta : AliasSeq, allSatisfy, staticMap;
     import std.format : fmt = format;
     import std.typecons : Tuple;
-    import std.exception : enforce, ifThrown;
+    import std.exception : enforce;
     import std.string : capitalize;
     import std.conv : to, ConvOverflowException;
     import std.array : appender, join;
@@ -196,7 +196,7 @@ struct UniNodeImpl(Node)
      * value = ctor value
      */
     this(T...)(auto ref T value) inout pure nothrow @trusted
-        if (T.length > 1)
+        if (T.length > 1 && allSatisfy!(isUniNodeInnerType, T))
     {
         alias ST = typeof(_storage.sequence);
         Node[] seq = new Node[value.length];
@@ -562,7 +562,7 @@ struct UniNodeImpl(Node)
     /**
      * Returns the hash of the `Node`'s current value.
      */
-    size_t toHash() const nothrow @safe
+    size_t toHash() const nothrow @trusted
     {
         final switch (_tag)
         {
@@ -753,6 +753,7 @@ struct UniNode
      * Sequence constructor
      */
     this(T...)(auto ref T val) inout pure nothrow @safe
+        if (T.length > 0 && allSatisfy!(isUniNodeInnerType, T))
     {
         node = Node(val);
     }
@@ -817,6 +818,29 @@ template match(handlers...)
 }
 
 
+/**
+ * Checking is UniNode
+ */
+template isUniNode(T)
+{
+    alias UT = Unqual!T;
+    static if (__traits(compiles, is(UT : UniNodeImpl!UT)))
+        enum isUniNode = is(UT : UniNodeImpl!UT);
+    else
+        enum isUniNode = false;
+}
+
+@("Checking is UniNode")
+@safe unittest
+{
+    alias UniUni = UniNode;
+    assert (isUniNode!UniUni);
+    assert (isUniNode!UniNode);
+    assert (!isUniNode!int);
+    assert (isUniNode!(const(UniNode)));
+}
+
+
 package:
 
 
@@ -832,7 +856,7 @@ template isUniNodeType(T, N)
         || isUniNodeArray!(T, N) || isUniNodeMapping!(T, N);
 }
 
-@("Checking for uninode")
+@("Checking for uninode type")
 @safe unittest
 {
     static foreach(T; Fields!(UniNode.Storage))

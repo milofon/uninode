@@ -111,7 +111,7 @@ struct UniNodeSerializer {}
  */
 UniNode serializeToUniNode(T)(auto ref const T value)
 {
-    return serialize!(UniNodeSerializer, UniNode)(value);
+    return serialize!(UniNode, UniNodeSerializer)(value);
 }
 
 
@@ -124,7 +124,7 @@ UniNode serializeToUniNode(T)(auto ref const T value)
 T deserializeUniNode(T)(UniNode src)
 {
     T value;
-    deserialize!(UniNodeSerializer, UniNode)(src, value);
+    deserialize!(UniNode, UniNodeSerializer)(src, value);
     return value;
 }
 
@@ -132,7 +132,8 @@ T deserializeUniNode(T)(UniNode src)
 /**
  * Serializes a value with Serializer
  */
-template serialize(Serializer : UniNodeSerializer, Node : UniNodeImpl!Node)
+template serialize(Node, Serializer : UniNodeSerializer)
+    if (isUniNode!Node)
 {
     Node serialize(T)(auto ref const T value)
     {
@@ -342,7 +343,8 @@ private:
 /**
  * Deserializes a value with Serializer
  */
-template deserialize(Serializer : UniNodeSerializer, Node : UniNodeImpl!Node)
+template deserialize(Node, Serializer : UniNodeSerializer)
+    if (isUniNode!Node)
 {
     void deserialize(T)(auto ref Node value, out T result)
     {
