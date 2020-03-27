@@ -524,6 +524,8 @@ struct UniNodeImpl(Node)
      * Iteration by Node mapping
      */
     int opApply(D)(D dg) inout
+        if (isCallable!D && (Parameters!D.length == 1 && isUniNode!(Parameters!D[0]))
+                || (Parameters!D.length == 2 && isUniNode!(Parameters!D[1])))
     {
         alias Params = Parameters!D;
 
