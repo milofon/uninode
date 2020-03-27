@@ -298,20 +298,6 @@ version (unittest)
 }
 
 
-@("Should work canMatch")
-@safe unittest
-{
-    static struct OverloadSet
-    {
-        static void fun(int n) {}
-        static void fun(double d) {}
-    }
-
-    assert(canMatch!(OverloadSet.fun, int));
-    assert(canMatch!(OverloadSet.fun, double));
-}
-
-
 @("Should work numeric node")
 @safe unittest
 {
@@ -402,7 +388,7 @@ version (unittest)
     auto node = UniNode(arr);
     size_t summ;
     UniNode[] values;
-    foreach (size_t i, n; node)
+    foreach (size_t i, UniNode n; node)
     {
         values ~= n;
         summ += i;
@@ -421,7 +407,7 @@ version (unittest)
     auto arr = [UniNode(5), UniNode(7)];
     const node = UniNode(arr);
     UniNode[] values;
-    foreach (n; node)
+    foreach (UniNode n; node)
         values ~= n;
 
     assert (arr.all!((i) => values.canFind(i)));

@@ -247,12 +247,19 @@ struct UniNodeImpl(Node)
      */
     inout(T) get(T)() inout pure @safe
     {
-        T wrapTo(A)(auto ref A val) pure @safe
+        T wrapTo(A)(auto ref A val) inout pure @safe
         {
             try
                 return val.to!T;
             catch (ConvOverflowException e)
                 throw new UniNodeException(e.msg);
+        }
+
+        void checkTag(T)(Tag target, string file = __FILE__, size_t line = __LINE__)
+            inout pure @safe
+        {
+            enforceUniNode(_tag == target,
+                fmt!("Trying to convert %s but have %s.")(T.stringof, _tag), file, line);
         }
 
         static if (isSignedNumeric!T)
@@ -336,72 +343,72 @@ struct UniNodeImpl(Node)
     /**
      * Convert UniNode to optional primitive type
      */
-    Optional!(const(T)) opt(T)() const pure @safe
+    Optional!(const(T)) opt(T)() const pure nothrow @safe
     {
         alias RT = Optional!(const(T));
         try
             return RT(get!T);
-        catch (UniNodeException e)
+        catch (Exception e)
             return RT.init;
     }
 
     /**
      * Convert UniNode to optional primitive type
      */
-    Optional!(T) opt(T)() pure @safe
+    Optional!(T) opt(T)() pure nothrow @safe
     {
         alias RT = Optional!(T);
         try
             return RT(get!T);
-        catch (UniNodeException e)
+        catch (Exception e)
             return RT.init;
     }
 
     /**
      * Convert UniNode to optional sequence
      */
-    Optional!(const(Node[])) optSequence() const pure @safe
+    Optional!(const(Node[])) optSequence() const pure nothrow @safe
     {
         alias RT = Optional!(const(Node[]));
         try
             return RT(getSequence());
-        catch (UniNodeException e)
+        catch (Exception e)
             return RT.init;
     }
 
     /**
      * Convert UniNode to optional sequence
      */
-    Optional!(Node[]) optSequence() pure @safe
+    Optional!(Node[]) optSequence() pure nothrow @safe
     {
         alias RT = Optional!(Node[]);
         try
             return RT(getSequence());
-        catch (UniNodeException e)
+        catch (Exception e)
             return RT.init;
     }
 
     /**
      * Convert UniNode to optional mapping
      */
-    Optional!(const(Node[string])) optMapping() const pure @safe
+    Optional!(const(Node[string])) optMapping() const pure nothrow @safe
     {
         alias RT = Optional!(const(Node[string]));
         try
             return RT(getMapping());
-        catch (UniNodeException e)
+        catch (Exception e)
             return RT.init;
     }
 
     /**
      * Convert UniNode to optional mapping
      */
-    Optional!(Node[string]) optMapping() pure @safe
+    Optional!(Node[string]) optMapping() pure nothrow @safe
     {
         alias RT = Optional!(Node[string]);
         try
             return RT(getMapping());
-        catch (UniNodeException e)
+        catch (Exception e)
             return RT.init;
     }
 
@@ -429,28 +436,28 @@ struct UniNodeImpl(Node)
      * Implement index assign operator by Node sequence
      */
     void opIndexAssign(T)(auto ref T val, size_t idx) @safe
-        if (isUniNodeInnerType!T || is(Unqual!T == Node))
+        if (isUniNodeInnerType!T || isUniNode!T)
     {
         enforceUniNode(can(Tag.sequence),
             fmt!("Trying to convert sequence but have %s.")(_tag), __FILE__, __LINE__);
-        static if (is(Unqual!T == Node))
+        static if (isUniNode!T)
             _val!(inout(Node[]))[idx] = val;
         else
-            _val!(inout(Node[]))[idx] = UniNode(val);
+            _val!(inout(Node[]))[idx] = Node(val);
     }
 
     /**
      * Implement index assign operator by Node mapping
      */
     void opIndexAssign(T)(auto ref T val, string key) @safe
-        if (isUniNodeInnerType!T || is(Unqual!T == Node))
+        if (isUniNodeInnerType!T || isUniNode!T)
     {
         enforceUniNode(can(Tag.mapping),
             fmt!("Trying to convert mapping but have %s.")(_tag), __FILE__, __LINE__);
-        static if (is(Unqual!T == Node))
+        static if (isUniNode!T)
             _val!(inout(Node[string]))[key] = val;
         else
-            _val!(inout(Node[string]))[key] = UniNode(val);
+            _val!(inout(Node[string]))[key] = Node(val);
     }
 
     /**
@@ -470,7 +477,7 @@ struct UniNodeImpl(Node)
     void opOpAssign(string op)(auto ref Node[] elem) @safe
         if (op == "~")
     {
-        opOpAssign!op(UniNode(elem));
+        opOpAssign!op(Node(elem));
     }
 
     /**
@@ -486,14 +493,16 @@ struct UniNodeImpl(Node)
     /**
      * Inserting if not present
      */
-    Node require(T)(string key, auto ref T val)
-        if (isUniNodeInnerType!T || is(Unqual!T == Node))
+    Node require(T)(string key, auto ref T val) @safe
+        if (isUniNodeInnerType!T || isUniNode!T)
     {
+        enforceUniNode(can(Tag.mapping),
+            fmt!("Trying to convert mapping but have %s.")(_tag), __FILE__, __LINE__);
         if (auto ret = key in _val!(Node[string]))
             return *ret;
         else
         {
-            static if (is(Unqual!T == Node))
+            static if (isUniNode!T)
                 return _val!(Node[string])[key] = val;
             else
                 return _val!(Node[string])[key] = Node(val);
@@ -508,55 +517,45 @@ struct UniNodeImpl(Node)
     {
         enforceUniNode(_tag == Tag.mapping,
             fmt!("Trying to convert mapping but have %s.")(_tag), __FILE__, __LINE__);
-        return key in _val!(Node[string]);
+        return key in _val!(inout(Node[string]));
     }
 
     /**
      * Iteration by Node mapping
      */
-    int opApply(scope int delegate(ref string, ref const(Node)) dg) const
+    int opApply(D)(D dg) inout
     {
-        return _opApply!(const(Node))(dg);
-    }
+        alias Params = Parameters!D;
 
-    /**
-     * Iteration by Node mapping
-     */
-    int opApply(scope int delegate(ref string, ref Node) dg)
-    {
-        return _opApply!(Node)(dg);
-    }
+        ref P toDelegateParam(P)(ref inout(Node) node) @trusted
+        {
+            return *(cast(P*)&node);
+        }
 
-    /**
-     * Iteration by Node array or object
-     */
-    int opApply(scope int delegate(ref size_t, ref const(Node)) dg) const
-    {
-        return _opApply!(const(Node))(dg);
-    }
-
-    /**
-     * Iteration by Node array or object
-     */
-    int opApply(scope int delegate(ref size_t, ref Node) dg)
-    {
-        return _opApply!(Node)(dg);
-    }
-
-    /**
-     * Iteration by Node array
-     */
-    int opApply(scope int delegate(ref const(Node)) dg) const
-    {
-        return _opApply!(const(Node))(dg);
-    }
-
-    /**
-     * Iteration by Node array
-     */
-    int opApply(scope int delegate(ref Node) dg)
-    {
-        return _opApply!(Node)(dg);
+        static if (Params.length == 1 && isUniNode!(Params[0]))
+        {
+            foreach (ref inout(Node) node; _val!(inout(Node[]))())
+            {
+                if (auto ret = dg(toDelegateParam!(Params[0])(node)))
+                    return ret;
+            }
+        }
+        else static if (Params.length == 2 && isUniNode!(Params[1]))
+        {
+            static if (isSomeString!(Params[0]))
+            {
+                foreach (Params[0] key, ref inout(Node) node; _val!(inout(Node[string]))())
+                    if (auto ret = dg(key, toDelegateParam!(Params[1])(node)))
+                        return ret;
+            }
+            else
+            {
+                foreach (Params[0] key, ref inout(Node) node; _val!(inout(Node[])))
+                    if (auto ret = dg(key, toDelegateParam!(Params[1])(node)))
+                        return ret;
+            }
+        }
+        return 0;
     }
 
     /**
@@ -662,47 +661,6 @@ struct UniNodeImpl(Node)
         toStringNode(this);
         return buff.data;
     }
-
-private:
-
-    void checkTag(T)(Tag target, string file = __FILE__, size_t line = __LINE__)
-        inout pure @safe
-    {
-        enforceUniNode(_tag == target,
-            fmt!("Trying to convert %s but have %s.")(T.stringof, _tag), file, line);
-    }
-
-    int _opApply(N, F)(scope F dg) inout @trusted
-    {
-        alias Params = Parameters!F;
-        auto fun = assumeSafe(dg);
-
-        static if (Params.length == 1 && is(Unqual!(Params[0]) : Node))
-        {
-            N[] nodes = cast(N[])getSequence();
-            foreach (ref N node; nodes)
-                if (auto ret = fun(node))
-                    return ret;
-        }
-        else static if (Params.length == 2 && is(Unqual!(Params[1]) : Node))
-        {
-            static if (isSomeString!(Params[0]))
-            {
-                N[string] nodes = cast(N[string])getMapping;
-                foreach (string key, ref N node; nodes)
-                    if (auto ret = fun(key, node))
-                        return ret;
-            }
-            else
-            {
-                N[] nodes = cast(N[])getSequence();
-                foreach (size_t key, ref N node; nodes)
-                    if (auto ret = fun(key, node))
-                        return ret;
-            }
-        }
-        return 0;
-    }
 }
 
 
@@ -790,12 +748,6 @@ class UniNodeException : Exception
         super(msg, file, line, next);
     }
 }
-
-
-/**
- * True if `handler` is a potential match for `T`, otherwise false.
- */
-enum bool canMatch(alias handler, T) = is(typeof((T arg) => handler(arg)));
 
 
 /**
@@ -931,6 +883,25 @@ template isUniNodeMapping(T, N)
 
 
 private:
+
+
+/**
+ * True if `handler` is a potential match for `T`, otherwise false.
+ */
+enum bool canMatch(alias handler, T) = is(typeof((T arg) => handler(arg)));
+
+@("Should work canMatch")
+@safe unittest
+{
+    static struct OverloadSet
+    {
+        static void fun(int n) {}
+        static void fun(double d) {}
+    }
+
+    assert(canMatch!(OverloadSet.fun, int));
+    assert(canMatch!(OverloadSet.fun, double));
+}
 
 
 @("Checking all types")
