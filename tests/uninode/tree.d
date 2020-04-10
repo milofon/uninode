@@ -12,8 +12,11 @@ private
     import std.exception : assertThrown, collectException;
 
     import uninode.tree;
-    import optional : orElse;
+    import optional : frontOr;
 }
+
+
+alias orElse = frontOr;
 
 
 version(unittest)
