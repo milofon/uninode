@@ -192,7 +192,12 @@ struct UniTree
     {
         auto nodePtr = findNode(path);
         if (nodePtr)
-            return nodePtr.node.opt!T;
+        {
+            static if (is (T : UniTree))
+                return Optional!(const(T))(*nodePtr);
+            else
+                return nodePtr.node.opt!T;
+        }
         else
             return Optional!(const(T)).init;
     }
@@ -212,7 +217,12 @@ struct UniTree
     {
         auto nodePtr = findNode(path);
         if (nodePtr)
-            return nodePtr.node.opt!T;
+        {
+            static if (is (T : UniTree))
+                return Optional!(T)(*nodePtr);
+            else
+                return nodePtr.node.opt!T;
+        }
         else
             return Optional!(T).init;
     }
