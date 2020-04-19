@@ -162,6 +162,31 @@ struct UniTree
     }
 
     /**
+     * Convert UniNode to primitive type or return alternative value
+     */
+    inout(T) getOrElse(T)(T alt) inout pure nothrow @safe
+    {
+        return node.getOrElse!T(alt);
+    }
+
+    /**
+     * Convert UniNode to primitive type or return alternative value
+     */
+    inout(T) getOrElse(T)(string path, T alt) inout pure @safe
+    {
+        auto nodePtr = findNode(path);
+        if (nodePtr)
+        {
+            static if (is (T : UniTree))
+                return *nodePtr;
+            else
+                return nodePtr.node.getOrElse!T(alt);
+        }
+        else
+            return alt;
+    }
+
+    /**
      * Convert UniNode to optional primitive type
      */
     Optional!(const(T)) opt(T)() const pure @safe

@@ -104,3 +104,11 @@ version(unittest)
     assert(res.get!int("obj.five") == 5);
 }
 
+
+@("Should work getOrElse method")
+@safe unittest
+{
+    mixin(SimpleConfigs);
+    assert (root.getOrElse("one", 10) == 10);
+}
+

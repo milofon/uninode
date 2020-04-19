@@ -648,3 +648,12 @@ version (unittest)
     assert (node.optMapping.empty);
 }
 
+
+@("Should work getOrElse method")
+@safe unittest
+{
+    immutable node = UniNode(1);
+    assert (node.getOrElse(2) == 1);
+    assert (node.getOrElse("h") == "h");
+}
+

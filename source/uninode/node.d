@@ -9,6 +9,11 @@
 
 module uninode.node;
 
+public
+{
+    import optional : frontOr;
+}
+
 private
 {
     import std.algorithm.searching: canFind;
@@ -362,6 +367,17 @@ struct UniNodeImpl(Node)
             return RT(get!T);
         catch (Exception e)
             return RT.init;
+    }
+
+    /**
+     * Convert UniNode to primitive type or return alternative value
+     */
+    inout(T) getOrElse(T)(T alt) inout pure nothrow @safe
+    {
+        try
+            return get!T;
+        catch (Exception e)
+            return alt;
     }
 
     /**
