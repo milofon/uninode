@@ -9,24 +9,17 @@
 
 module uninode.node;
 
-public
-{
-    import optional : frontOr;
-}
-
 private
 {
     import std.algorithm.searching: canFind;
     import std.meta : AliasSeq, allSatisfy, staticMap;
     import std.format : fmt = format;
-    import std.typecons : Tuple;
+    import std.typecons : Tuple, Nullable;
     import std.exception : enforce;
     import std.string : capitalize;
     import std.conv : to, ConvOverflowException;
     import std.array : appender, join;
     import std.traits;
-
-    import optional : Optional;
 }
 
 
@@ -348,9 +341,9 @@ struct UniNodeImpl(Node)
     /**
      * Convert UniNode to optional primitive type
      */
-    Optional!(const(T)) opt(T)() const pure nothrow @safe
+    Nullable!(const(T)) opt(T)() const pure nothrow @safe
     {
-        alias RT = Optional!(const(T));
+        alias RT = Nullable!(const(T));
         try
             return RT(get!T);
         catch (Exception e)
@@ -360,9 +353,9 @@ struct UniNodeImpl(Node)
     /**
      * Convert UniNode to optional primitive type
      */
-    Optional!(T) opt(T)() pure nothrow @safe
+    Nullable!(T) opt(T)() pure nothrow @safe
     {
-        alias RT = Optional!(T);
+        alias RT = Nullable!(T);
         try
             return RT(get!T);
         catch (Exception e)
@@ -383,9 +376,9 @@ struct UniNodeImpl(Node)
     /**
      * Convert UniNode to optional sequence
      */
-    Optional!(const(Node[])) optSequence() const pure nothrow @safe
+    Nullable!(const(Node[])) optSequence() const pure nothrow @safe
     {
-        alias RT = Optional!(const(Node[]));
+        alias RT = Nullable!(const(Node[]));
         try
             return RT(getSequence());
         catch (Exception e)
@@ -395,9 +388,9 @@ struct UniNodeImpl(Node)
     /**
      * Convert UniNode to optional sequence
      */
-    Optional!(Node[]) optSequence() pure nothrow @safe
+    Nullable!(Node[]) optSequence() pure nothrow @safe
     {
-        alias RT = Optional!(Node[]);
+        alias RT = Nullable!(Node[]);
         try
             return RT(getSequence());
         catch (Exception e)
@@ -407,9 +400,9 @@ struct UniNodeImpl(Node)
     /**
      * Convert UniNode to optional mapping
      */
-    Optional!(const(Node[string])) optMapping() const pure nothrow @safe
+    Nullable!(const(Node[string])) optMapping() const pure nothrow @safe
     {
-        alias RT = Optional!(const(Node[string]));
+        alias RT = Nullable!(const(Node[string]));
         try
             return RT(getMapping());
         catch (Exception e)
@@ -419,9 +412,9 @@ struct UniNodeImpl(Node)
     /**
      * Convert UniNode to optional mapping
      */
-    Optional!(Node[string]) optMapping() pure nothrow @safe
+    Nullable!(Node[string]) optMapping() pure nothrow @safe
     {
-        alias RT = Optional!(Node[string]);
+        alias RT = Nullable!(Node[string]);
         try
             return RT(getMapping());
         catch (Exception e)

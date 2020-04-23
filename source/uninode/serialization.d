@@ -21,8 +21,6 @@ private
     import std.meta;
 
     import bolts : FilterMembersOf;
-    import optional : Optional, OptionalTarget;
-    import optional.traits : isOptional;
 
     import uninode.node;
 }
@@ -164,13 +162,6 @@ private:
                 return serializeValue!(A)(null);
             else
                 return serializeValue!(TemplateArgsOf!T[0], A)(value.get);
-        }
-        else static if (isOptional!T)
-        {
-            if (value.empty)
-                return serializeValue!(A)(null);
-            else
-                return serializeValue!(OptionalTarget!T, A)(value.front);
         }
         else static if (is(T == enum))
         {
@@ -369,13 +360,6 @@ private:
         {
             if (!value.canNil)
                 return T(deserializeValue!(TemplateArgsOf!T[0], A)(value));
-            else
-                return T.init;
-        }
-        else static if (isOptional!T)
-        {
-            if (!value.canNil)
-                return T(deserializeValue!(OptionalTarget!T, A)(value));
             else
                 return T.init;
         }

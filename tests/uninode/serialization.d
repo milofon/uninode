@@ -15,8 +15,6 @@ private
     import std.conv : text;
     import std.typecons;
 
-    import optional : Optional;
-
     import uninode.node : Bytes;
     import uninode.serialization;
 }
@@ -78,7 +76,6 @@ version (unittest)
 @("Should de/serialize nullable types")
 @safe unittest
 {
-    assert (serializeToUniNode(Optional!int.init).canNil);
     assert (serializeToUniNode(Nullable!int.init).canNil);
 
     auto nNode = serializeToUniNode(Nullable!int(11));
@@ -87,11 +84,11 @@ version (unittest)
     assert (!nVal.isNull);
     assert (nVal.get == 11);
 
-    auto oNode = serializeToUniNode(Optional!string("hello"));
+    auto oNode = serializeToUniNode(Nullable!string("hello"));
     assert (oNode == UniNode("hello"));
-    const oVal = deserializeUniNode!(Optional!string)(oNode);
-    assert (!oVal.empty);
-    assert (oVal.front == "hello");
+    const oVal = deserializeUniNode!(Nullable!string)(oNode);
+    assert (!oVal.isNull);
+    assert (oVal.get == "hello");
 }
 
 

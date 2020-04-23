@@ -632,20 +632,20 @@ version (unittest)
 @system unittest
 {
     immutable node = UniNode(1);
-    assert (!node.opt!int.empty);
-    assert (node.opt!string.empty);
-    assert (node.opt!(UniNode[]).empty);
-    assert (node.opt!(UniNode[string]).empty);
+    assert (!node.opt!int.isNull);
+    assert (node.opt!string.isNull);
+    assert (node.opt!(UniNode[]).isNull);
+    assert (node.opt!(UniNode[string]).isNull);
 
     UniNode anode = UniNode([UniNode(1), UniNode(2)]);
-    assert (!anode.opt!(UniNode[]).empty);
-    assert (!anode.optSequence.empty);
-    assert (node.optSequence.empty);
+    assert (!anode.opt!(UniNode[]).isNull);
+    assert (!anode.optSequence.isNull);
+    assert (node.optSequence.isNull);
 
     UniNode mnode = UniNode(["one": UniNode(1), "two": UniNode(2)]);
-    assert (!mnode.opt!(UniNode[string]).empty);
-    assert (!mnode.optMapping.empty);
-    assert (node.optMapping.empty);
+    assert (!mnode.opt!(UniNode[string]).isNull);
+    assert (!mnode.optMapping.isNull);
+    assert (node.optMapping.isNull);
 }
 
 

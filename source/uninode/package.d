@@ -10,6 +10,7 @@ module uninode;
 public
 {
     import uninode.node;
+    import uninode.tree;
     import uninode.serialization;
 }
 

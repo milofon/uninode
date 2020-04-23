@@ -13,8 +13,7 @@ private
 {
     import std.format : fmt = format;
     import std.array : split;
-
-    import optional : Optional;
+    import std.typecons : Nullable;
 
     import uninode.node;
 }
@@ -189,7 +188,7 @@ struct UniTree
     /**
      * Convert UniNode to optional primitive type
      */
-    Optional!(const(T)) opt(T)() const pure @safe
+    Nullable!(const(T)) opt(T)() const pure @safe
     {
         return node.opt!T;
     }
@@ -197,7 +196,7 @@ struct UniTree
     /**
      * Convert UniNode to optional primitive type
      */
-    Optional!(T) opt(T)() pure @safe
+    Nullable!(T) opt(T)() pure @safe
     {
         return node.opt!T;
     }
@@ -213,18 +212,18 @@ struct UniTree
      * node.opt!int("foo.bar");
      * ---
      */
-    Optional!(const(T)) opt(T)(string path) const pure @safe
+    Nullable!(const(T)) opt(T)(string path) const pure @safe
     {
         auto nodePtr = findNode(path);
         if (nodePtr)
         {
             static if (is (T : UniTree))
-                return Optional!(const(T))(*nodePtr);
+                return Nullable!(const(T))(*nodePtr);
             else
                 return nodePtr.node.opt!T;
         }
         else
-            return Optional!(const(T)).init;
+            return Nullable!(const(T)).init;
     }
 
     /**
@@ -238,18 +237,18 @@ struct UniTree
      * node.opt!int("foo.bar");
      * ---
      */
-    Optional!(T) opt(T)(string path) pure @safe
+    Nullable!(T) opt(T)(string path) pure @safe
     {
         auto nodePtr = findNode(path);
         if (nodePtr)
         {
             static if (is (T : UniTree))
-                return Optional!(T)(*nodePtr);
+                return Nullable!(T)(*nodePtr);
             else
                 return nodePtr.node.opt!T;
         }
         else
-            return Optional!(T).init;
+            return Nullable!(T).init;
     }
 
     /**

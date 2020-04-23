@@ -12,11 +12,7 @@ private
     import std.exception : assertThrown, collectException;
 
     import uninode.tree;
-    import optional : frontOr;
 }
-
-
-alias orElse = frontOr;
 
 
 version(unittest)
@@ -42,8 +38,8 @@ version(unittest)
 {
     mixin (SimpleConfigs);
     assert (root.get!int("obj.one") == 1);
-    assert (!root.opt!int("obj.one").empty);
-    assert (root.opt!int("obj.three").empty);
+    assert (!root.opt!int("obj.one").isNull);
+    assert (root.opt!int("obj.three").isNull);
     assert (root.get!UniTree("obj").canMapping);
     assert (root.get!UniTree("obj").get!int("one") == 1);
 }
@@ -65,7 +61,7 @@ version(unittest)
 @safe unittest
 {
     mixin (SimpleConfigs);
-    assert (root.opt!int("one").orElse(10) == 10);
+    assert (root.getOrElse("one", 10) == 10);
 }
 
 
