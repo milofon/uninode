@@ -359,7 +359,7 @@ private:
      *
      * path = The path to the desired site
      */
-    inout(UniTree)* findNode(string path) inout pure @safe
+    inout(UniTree)* findNode(string path) inout pure @safe return
     {
         auto names = path.split(DELIMITER_CHAR);
 
